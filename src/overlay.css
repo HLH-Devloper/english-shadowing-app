@@ -1,0 +1,93 @@
+/* 覆盖样式：恢复控件为叠加风格并修复全屏字幕对齐 */
+
+/* 播放器主区域采用居中 Flex 布局 */
+.video-section {
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+/* 顶部控件覆盖在视频上方，带渐变背景，保持清晰 */
+.video-top-controls {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+}
+
+/* 底部控件覆盖在视频下方，带渐变背景，分组间距更清晰 */
+.video-bottom-controls {
+  position: absolute !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 10;
+}
+
+/* 中部视频画布保持相对定位以承载字幕与中心播放按钮 */
+.video-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* 字幕容器采用纵向居中对齐，确保双语上下居中一致 */
+.video-canvas .subtitle-overlay {
+  position: absolute;
+  bottom: var(--subtitle-baseline, 12%);
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 92%; /* 字幕宽度不超出视频画布，避免“字幕比屏幕大” */
+}
+
+.subtitle-overlay-original {
+  display: block;
+  white-space: normal; /* 长句时均衡换行，避免左右不齐 */
+  text-wrap: balance;
+  max-width: 100%;
+  font-size: clamp(16px, 2.2vw, 26px); /* 在不同屏幕下自适应字号 */
+}
+
+.subtitle-overlay-translation {
+  display: block;
+  max-width: 100%;
+  font-size: clamp(14px, 2.0vw, 22px);
+}
+
+/* 全屏模式下微调字幕基线，避免上下不齐 */
+.video-section:fullscreen .subtitle-overlay {
+  bottom: var(--subtitle-baseline-full, 10%);
+}
+
+/* 全屏下视频充满视口但保持比例 */
+.video-section:fullscreen .video-player {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  object-fit: contain;
+}
