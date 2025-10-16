@@ -71,6 +71,39 @@ body.theme-dark .upload-text { color: var(--text); font-weight: 700; }
 body.theme-dark .upload-subtext { color: var(--text-secondary); }
 body.theme-dark .brand-subtitle { color: var(--text-secondary); }
 
+/* ===== 顶部页头局部可读性优化（仅作用于红圈区域） ===== */
+.page-header .brand-title {
+  color: #0b1228;           /* 深色文字增强对比 */
+  font-weight: 800;         /* 保持强字重 */
+  letter-spacing: .25px;    /* 略增字距提升清晰度 */
+}
+.page-header .header-tabs .tab-btn {
+  color: #0b1228;           /* 标签默认深色，提升可读性 */
+  font-weight: 700;         /* 从 600 提升到 700 */
+}
+.page-header .header-tabs .tab-btn:hover { color: #0b1228; }
+.page-header .header-tabs .tab-btn.active {
+  color: #0b1228;           /* 激活态仍用深色 */
+  background: rgba(124,156,255,0.24);
+  box-shadow: 0 0 0 1px #7c9cff inset;
+}
+.page-header .user-chip {
+  color: #0b1228;           /* 登录后用户信息改为深色文字 */
+}
+.page-header .user-email { color: #0b1228; font-weight: 700; }
+.page-header .membership-badge {
+  color: #0b57d0;           /* 徽标文字增强对比 */
+  border-color: #0b57d0;
+  background: rgba(11,87,208,0.12);
+}
+
+/* 首页 Hero 的会员状态提示（仅该行） */
+.hero-actions .hint-text {
+  color: #e5edff;           /* 更亮以增强对比 */
+  font-weight: 700;         /* 提升字重 */
+  font-size: 15px;          /* 略微增大字号 */
+}
+
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 body {
@@ -119,6 +152,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap; /* 小屏自动换行，避免与登录按钮重叠 */
   padding: 12px 24px;
   margin: -24px -24px 16px; /* 铺满到左右边缘，与页面内边距对齐 */
 }
@@ -151,6 +185,7 @@ body {
   border-bottom: 1px solid var(--border);
   margin-bottom: 16px;
   align-items: center; /* 与右侧操作区垂直对齐 */
+  flex-wrap: wrap; /* 标签在小屏可自动换行 */
 }
 .tab-btn {
   appearance: none;
@@ -192,6 +227,12 @@ body {
   border-color: var(--primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(29, 78, 216, 0.3);
+}
+
+/* 响应式：中小屏将选项卡移至下一行，品牌在左、登录在右 */
+@media (max-width: 1024px) {
+  .header-actions { order: 2; margin-left: auto; }
+  .header-tabs { order: 3; width: 100%; margin-top: 6px; }
 }
 
 /* TED 简洁布局与标签样式 */
@@ -727,7 +768,9 @@ body {
   transform: translateX(-50%);
   text-align: center;
   z-index: 5; /* 低于底部控件 */
-  pointer-events: none; /* 避免遮挡底部按钮点击 */
+  pointer-events: auto; /* 允许点击字幕中的词语 */
+  /* 将宽度限制在视频容器的 92%，避免“字幕比视频宽” */
+  max-width: 92%;
 }
 /* 取消不同状态下的像素抬高，统一基线位置以匹配模板红线 */
 .video-section.controls-visible .subtitle-overlay { bottom: var(--subtitle-baseline, 12%); }
@@ -738,18 +781,18 @@ body {
   color: #ffeb3b; /* 模板黄色 */
   font-size: 26px; /* 英文更大 */
   line-height: 1.5;
-  white-space: nowrap; /* 英文尽量一行显示 */
-  max-width: 92vw; /* 防止超长句子撑破布局 */
+  /* 允许长句在容器内均衡换行，避免超出视频 */
+  white-space: normal;
+  text-wrap: balance;
+  max-width: 100%;
   display: inline-block;
-  overflow: hidden;
-  text-overflow: ellipsis;
   text-shadow: 0 0 2px #000, 0 0 4px #000, 0 2px 6px rgba(0,0,0,0.85);
 }
 .subtitle-overlay-translation {
   color: #ffffff; /* 中文较小、白色 */
   opacity: 0.95;
   font-size: 20px;
-  max-width: 92vw;
+  max-width: 100%;
   display: inline-block;
   overflow-wrap: anywhere; /* 极端长词时也允许换行，保持稳定 */
   text-shadow: 0 1px 3px rgba(0,0,0,0.6);
@@ -1537,10 +1580,10 @@ body {
   .video-canvas { width: 100%; }
 }
 .upload-page .header-actions {
-  position: fixed;
-  top: 8px;
-  right: 24px;
-  z-index: 1000; /* 固定到右上角，避免登录后布局抖动 */
+  position: static; /* 取消固定定位，避免与顶部标签重叠 */
+  top: auto;
+  right: auto;
+  z-index: 10;
 }
 
 /* —— 首页 Hero 模块（新布局与配色） —— */
@@ -1614,13 +1657,44 @@ body {
 .app-toast.error { border-color: #ef4444; }
 .app-toast.success { border-color: #22c55e; }
 
-/* ===== 覆盖规则：放大视频与调整字幕 ===== */
-/* 进一步放大视频区域（宽度与高度约束），靠近参考站效果 */
-.video-canvas { max-width: min(1680px, 98vw); }
-.video-player { max-width: min(1680px, 98vw); max-height: 88vh; }
+/* ===== 可选覆盖（如需更大字号，可在此调整，但默认关闭） ===== */
+/* .video-section .subtitle-overlay { bottom: 10%; }
+   .subtitle-overlay-original { font-size: 28px; }
+   .subtitle-overlay-translation { font-size: 22px; } */
 
-/* 将字幕整体下移并增大字号（优先级覆盖） */
-.video-section .subtitle-overlay { bottom: 8% !important; }
-.subtitle-overlay-original { font-size: 32px !important; }
-.subtitle-overlay-translation { font-size: 24px !important; }
+/* 通用模态弹窗（确认/提示） */
+.app-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.app-modal {
+  width: min(520px, 92vw);
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+}
+.app-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.app-modal-message {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+.app-modal-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
 

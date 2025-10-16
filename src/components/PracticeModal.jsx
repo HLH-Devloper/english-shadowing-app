@@ -221,6 +221,8 @@ export default function PracticeModal({ isOpen, onClose, targetText }) {
     recog.lang = hasZh ? 'zh-CN' : 'en-US'
     recog.interimResults = true
     recog.continuous = true
+    // 提高识别质量：启用多个备选并选择置信度最高的结果
+    try { recog.maxAlternatives = 3 } catch {}
     // 开始识别前清空上一轮的文本与计数
     recogTextRef.current = ''
     setRecognizedText('')
@@ -231,7 +233,15 @@ export default function PracticeModal({ isOpen, onClose, targetText }) {
       try {
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const res = event.results[i]
-          const alt = res[0]
+          let alt = res[0]
+          // 若存在多个备选，优先选择置信度最高的一项
+          try {
+            const candidates = Array.from(res)
+            if (candidates.length > 1) {
+              candidates.sort((a, b) => (b?.confidence || 0) - (a?.confidence || 0))
+              alt = candidates[0]
+            }
+          } catch {}
           if (res.isFinal && alt?.transcript) {
             const next = (recogTextRef.current ? recogTextRef.current + ' ' : '') + alt.transcript
             recogTextRef.current = next

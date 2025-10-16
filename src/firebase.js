@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 // 使用 Vite 环境变量，请在 .env.local 中配置以下键：
@@ -18,3 +18,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+
+// 将认证邮件语言设置为中文，以便用户收到中文正文内容
+auth.languageCode = 'zh-CN'
+
+// 已登录用户修改密码：需要使用当前密码进行“近期登录”重新验证
+export async function changePassword(currentPassword, newPassword) {
+  const user = auth.currentUser
+  if (!user) throw new Error('not_logged_in')
+  if (!user.email) throw new Error('missing_email')
+  const credential = EmailAuthProvider.credential(user.email, currentPassword)
+  await reauthenticateWithCredential(user, credential)
+  await updatePassword(user, newPassword)
+}
+
+// 发送“忘记密码”重置邮件
+export async function sendPasswordReset(email) {
+  if (!email) throw new Error('missing_email')
+  await sendPasswordResetEmail(auth, email)
+}

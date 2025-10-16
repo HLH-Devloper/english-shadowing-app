@@ -5,6 +5,8 @@ import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth, db } from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import Toast from './Toast'
+import ConfirmDialog from './ConfirmDialog'
+import MembershipModal from './MembershipModal'
 
 export default function UploadPage() {
   // 使用本地状态记录上传的文件与是否可开始学习
@@ -19,6 +21,10 @@ export default function UploadPage() {
   const [toastType, setToastType] = useState('info')
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
+  const [confirmStartOpen, setConfirmStartOpen] = useState(false)
+  const [membershipOpen, setMembershipOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   // 新增：分区选项卡与 TED 链接输入状态（各分区互不影响）
   const [activeTab, setActiveTab] = useState('local') // local | ted | movie
@@ -83,15 +89,11 @@ export default function UploadPage() {
   function handleStartLearning() {
     if (!videoFile) return
     if (!currentUser) {
-      // 未登录也允许进入播放器，试看 60 秒
-      showNotice('未登录用户可先进入播放器试看 1 分钟', 'warning')
+      // 未登录：先弹确认，说明试看与建议登录
+      setConfirmStartOpen(true)
+      return
     }
-    navigate('/player', {
-      state: {
-        videoFile: videoFile,
-        subtitleFile: subtitleFile || null,
-      },
-    })
+    navigate('/player', { state: { videoFile: videoFile, subtitleFile: subtitleFile || null } })
   }
 
   // 监听登录态，并读取 Firestore 用户基本信息
@@ -112,8 +114,10 @@ export default function UploadPage() {
     return () => unsub()
   }, [])
 
-  const handleSignOut = async () => {
-    try { await signOut(auth) } catch (e) { console.warn('退出失败', e) }
+  const handleSignOut = async () => { setConfirmLogoutOpen(true) }
+  const confirmLogout = async () => {
+    setConfirmLogoutOpen(false)
+    try { await signOut(auth); showNotice('👋 已退出登录', 'success') } catch (e) { showNotice('⚠️ 操作失败，请稍后重试', 'error') }
   }
 
   return (
@@ -146,16 +150,40 @@ export default function UploadPage() {
           >本地</button>
         </nav>
         {/* 右上角操作：注册/用户信息 */}
-        <div className="header-actions">
+        <div className="header-actions" style={{ position: 'relative', gap: 12 }}>
           {currentUser ? (
-            <div className="user-chip" title="点击退出" onClick={handleSignOut}>
-              <span className="user-email">{currentUser.email}</span>
-              <span className={`membership-badge ${userProfile?.membership || 'free'}`}>{userProfile?.membership || 'free'}</span>
-            </div>
+            <>
+              {userProfile?.membership !== 'member' && (
+                <button
+                  className="header-action-btn"
+                  onClick={() => setMembershipOpen(true)}
+                  title="开通会员"
+                >开通会员</button>
+              )}
+              <div
+                className="user-chip"
+                role="button"
+                tabIndex={0}
+                title="打开用户菜单"
+                onClick={() => setUserMenuOpen(v => !v)}
+              >
+                <span className="user-email">{currentUser.email}</span>
+                <span className={`membership-badge ${userProfile?.membership || (currentUser ? 'free' : 'free')}`}>{userProfile?.membership || (currentUser ? 'free' : '游客')}</span>
+              </div>
+              {userMenuOpen && (
+                <div className="dropdown-menu" style={{ position: 'absolute', top: '100%', right: 0, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 12px 24px rgba(0,0,0,0.12)', padding: 8, zIndex: 20 }}>
+                  {userProfile?.membership !== 'member' && (
+                    <button className="link-btn" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px' }} onClick={() => { setMembershipOpen(true); setUserMenuOpen(false) }}>💎 开通会员</button>
+                  )}
+                  <button className="link-btn" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px' }} onClick={() => { navigate('/password'); setUserMenuOpen(false) }}>🔐 账户安全（设置登录密码）</button>
+                  <button className="link-btn" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px' }} onClick={() => { setConfirmLogoutOpen(true); setUserMenuOpen(false) }}>🚪 退出登录</button>
+                </div>
+              )}
+            </>
           ) : (
             <>
-              <button className="header-action-btn" onClick={() => navigate('/register')}>注册</button>
-              <button className="header-action-btn" onClick={() => navigate('/register')}>登录</button>
+              <button className="header-action-btn" onClick={() => navigate('/register', { state: { mode: 'login' } })}>登录</button>
+              <button className="header-action-btn" onClick={() => setMembershipOpen(true)}>开通会员</button>
             </>
           )}
         </div>
@@ -171,9 +199,10 @@ export default function UploadPage() {
             <span>跟读鸭 - 你的专属英语陪练</span>
           </div>
           <p className="hero-desc">导入影视/TED 视频，配合双语字幕，练听力与跟读，一站式提升听说能力。</p>
-          <div className="hero-actions">
-            <button className="hero-primary" onClick={() => { setActiveTab('local'); videoInputRef.current?.click() }}>开始学习</button>
-            {!currentUser && (<button className="hero-secondary" onClick={() => navigate('/register')}>登录 / 注册</button>)}
+          <div className="hero-actions" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {!currentUser && (<button className="hero-secondary" onClick={() => navigate('/register', { state: { mode: 'login' } })}>登录</button>)}
+            <span className="hint-text">会员状态：{userProfile?.membership || (currentUser ? 'free' : '游客')}</span>
+            {/* 移除“升级会员”按钮 */}
           </div>
         </div>
         <div className="hero-visual" aria-hidden="true" />
@@ -247,6 +276,28 @@ export default function UploadPage() {
           </div>
         </div>
       )}
+      {/* 确认退出登录 */}
+      <ConfirmDialog
+        isOpen={confirmLogoutOpen}
+        title="⚠️ 确认退出登录？"
+        message={"退出后将无法继续观看会员内容\n可随时再次登录恢复权限"}
+        confirmText="确定"
+        cancelText="取消"
+        onConfirm={confirmLogout}
+        onCancel={() => setConfirmLogoutOpen(false)}
+      />
+      {/* 会员开通/升级引导弹窗 */}
+      <MembershipModal isOpen={membershipOpen} onClose={() => setMembershipOpen(false)} />
+      {/* 未登录开始学习确认 */}
+      <ConfirmDialog
+        isOpen={confirmStartOpen}
+        title="🎬 进入播放器开始学习？"
+        message={"未登录也可进入播放器试看 1 分钟\n建议登录以保存学习进度"}
+        confirmText="进入"
+        cancelText="取消"
+        onConfirm={() => { setConfirmStartOpen(false); navigate('/player', { state: { videoFile, subtitleFile: subtitleFile || null } }) }}
+        onCancel={() => setConfirmStartOpen(false)}
+      />
       {/* App 内提示：Toast */}
       <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
     </section>

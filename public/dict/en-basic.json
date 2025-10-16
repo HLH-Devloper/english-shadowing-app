@@ -1,0 +1,35 @@
+{
+  "involved": {
+    "ipa": "ɪnˈvɒlvd",
+    "defs": [
+      "adj. 涉及的；复杂的；投入的",
+      "v. 使卷入；参与（过去分词）"
+    ],
+    "examples": [
+      "He was deeply involved in the project.",
+      "The story is too involved to explain briefly."
+    ]
+  },
+  "impact": {
+    "ipa": "ˈɪmpækt",
+    "defs": [
+      "n. 影响；冲击",
+      "v. 影响；撞击"
+    ],
+    "examples": [
+      "The new policy had a significant impact on sales.",
+      "The meteor impacted the surface."
+    ]
+  },
+  "experience": {
+    "ipa": "ɪkˈspɪəriəns",
+    "defs": [
+      "n. 经验；经历",
+      "v. 体验；经历"
+    ],
+    "examples": [
+      "She has years of teaching experience.",
+      "We experienced heavy rain last night."
+    ]
+  }
+}

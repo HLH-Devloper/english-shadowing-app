@@ -58,7 +58,7 @@
   transform: translateX(-50%);
   text-align: center;
   z-index: 5;
-  pointer-events: none;
+  pointer-events: auto; /* 允许点击字幕词 */
   display: flex;
   flex-direction: column;
   align-items: center;
