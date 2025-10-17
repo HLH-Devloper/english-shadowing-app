@@ -108,7 +108,7 @@ const scoreSpeech = ({ targetText, recognizedText, durationSec, confidenceAvg, p
   }
 }
 
-export default function PracticeModal({ isOpen, onClose, targetText }) {
+export default function PracticeModal({ isOpen, onClose, targetText, startTime, endTime, onReplayOriginal }) {
   const [isRecording, setIsRecording] = useState(false)
   const [recognizedText, setRecognizedText] = useState('')
   const [scores, setScores] = useState(null)
@@ -400,8 +400,8 @@ export default function PracticeModal({ isOpen, onClose, targetText }) {
           <span className="step-index">{attemptCount}/5</span>
           <span className="step-label">{step === 1 ? '目标句子' : step === 2 ? '录音中' : step === 3 ? '识别中' : '评分完成'}</span>
         </div>
-        <div className="practice-section-title">目标句子 <button className="practice-btn" onClick={() => replayTargetSentence(targetText)} title="复读原句" style={{ marginLeft: 8, padding: '2px 8px', fontSize: 12 }}>🔁 复读</button></div>
-        <div className="practice-target" onClick={() => replayTargetSentence(targetText)} title="点击复读原句">{targetText || '（当前句子为空）'}</div>
+        <div className="practice-section-title">目标句子 <button className="practice-btn" onClick={() => { try { onReplayOriginal?.(startTime, endTime) } catch {} }} title="复读原句" style={{ marginLeft: 8, padding: '2px 8px', fontSize: 12 }}>🔁 复读</button></div>
+        <div className="practice-target" onClick={() => { try { onReplayOriginal?.(startTime, endTime) } catch {} }} title="点击复读原句">{targetText || '（当前句子为空）'}</div>
 
         <div className="practice-recorder">
           <canvas ref={canvasRef} className="practice-wave" width={420} height={48} />
@@ -508,20 +508,9 @@ export default function PracticeModal({ isOpen, onClose, targetText }) {
     </div>
   )
 }
-  // 复读目标句：使用浏览器 TTS（传入目标文本）
-  const replayTargetSentence = (target) => {
-    try {
-      const synth = window.speechSynthesis
-      if (!synth) return
-      synth.cancel()
-      const utter = new SpeechSynthesisUtterance(String(target || ''))
-      const hasZh = /[\u4e00-\u9fff]/.test(String(target || ''))
-      utter.lang = hasZh ? 'zh-CN' : 'en-US'
-      const voices = synth.getVoices?.() || []
-      const pick = voices.find(v => v.lang?.toLowerCase().includes(utter.lang.toLowerCase()))
-      if (pick) utter.voice = pick
-      synth.speak(utter)
-    } catch {}
+  // 复读目标句：改为播放视频原声片段（由父组件控制 <video>）
+  const replayTargetSentence = () => {
+    try { onReplayOriginal?.(startTime, endTime) } catch {}
   }
 
   // 词级差异标记（基于 LCS）

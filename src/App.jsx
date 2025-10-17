@@ -5,6 +5,7 @@ import UploadPage from './components/UploadPage'
 import PlayerPage from './components/PlayerPage'
 import RegisterPage from './components/RegisterPage'
 import PasswordPage from './components/PasswordPage'
+import InviteSeedPage from './components/InviteSeedPage'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="/player" element={<PlayerPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/password" element={<PasswordPage />} />
+          <Route path="/seed" element={<InviteSeedPage />} />
         </Routes>
       </div>
     </Router>
