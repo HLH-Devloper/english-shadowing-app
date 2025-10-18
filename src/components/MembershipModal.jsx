@@ -25,7 +25,7 @@ export default function MembershipModal({ isOpen, onClose }) {
         </div>
         <div className="app-modal-actions">
           {/* 改为站内导航，避免外链刷新导致 404 */}
-          <button className="link-btn" style={{ marginRight: 'auto' }} onClick={() => { navigate('/register', { state: { mode: 'register' } }); onClose?.() }}>我有兑换码</button>
+          <button className="link-btn" style={{ marginRight: 'auto' }} onClick={() => { navigate('/redeem'); onClose?.() }}>我有兑换码</button>
           <button className="secondary-btn" onClick={onClose}>好的，期待！</button>
           <a className="primary-btn" href={xhsUrl} target="_blank" rel="noreferrer">去小红书关注</a>
         </div>
