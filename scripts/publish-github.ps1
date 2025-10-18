@@ -20,7 +20,8 @@ param(
 )
 
 function Ensure-Env($name) {
-  if (-not $env:$name -or $env:$name.Trim() -eq "") {
+  $val = [Environment]::GetEnvironmentVariable($name)
+  if (-not $val -or $val.Trim() -eq "") {
     Write-Error "Environment variable '$name' is required."
     exit 1
   }
@@ -30,9 +31,9 @@ Ensure-Env 'GITHUB_USERNAME'
 Ensure-Env 'GITHUB_TOKEN'
 Ensure-Env 'REPO_NAME'
 
-$owner = $env:GITHUB_USERNAME
-$token = $env:GITHUB_TOKEN
-$repo  = $env:REPO_NAME
+$owner = [Environment]::GetEnvironmentVariable('GITHUB_USERNAME')
+$token = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN')
+$repo  = [Environment]::GetEnvironmentVariable('REPO_NAME')
 
 # Create repo via GitHub API (idempotent)
 $headers = @{ Authorization = "token $token"; 'User-Agent' = "publish-script"; Accept = 'application/vnd.github+json' }
@@ -43,11 +44,15 @@ try {
   if ($existing) { Write-Host "Repo exists: $owner/$repo" }
   else {
     Write-Host "Creating repo: $owner/$repo ($Visibility)"
-    Invoke-RestMethod -Method POST -Uri "https://api.github.com/user/repos" -Headers $headers -Body $body | Out-Null
-    Write-Host "Repo created"
+    try {
+      Invoke-RestMethod -Method POST -Uri "https://api.github.com/user/repos" -Headers $headers -Body $body | Out-Null
+      Write-Host "Repo created"
+    } catch {
+      Write-Warning "Create repo via API failed (fine-grained tokens often cannot create repos). If push fails, create it on GitHub first: https://github.com/new"
+    }
   }
 } catch {
-  Write-Warning "Repo check/create failed (might still exist). Continuing..."
+  Write-Warning "Repo check failed (token might be fine-grained). Proceeding to push."
 }
 
 # Configure origin remote
@@ -57,6 +62,12 @@ git remote remove origin 2>$null
 git remote add origin $remoteUrl
 
 # Push main branch
-git push -u origin main
+try {
+  git push -u origin main
+  Write-Host "Pushed to https://github.com/$owner/$repo" -ForegroundColor Green
+} catch {
+  Write-Warning "Push failed. If the repository doesn't exist, create it on GitHub and re-run the script."
+}
 
-Write-Host "Pushed to https://github.com/$owner/$repo" -ForegroundColor Green
+# Sanitize remote (remove token from URL)
+git remote set-url origin "https://github.com/$owner/$repo.git" 2>$null

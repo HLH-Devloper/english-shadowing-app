@@ -1,7 +1,9 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function MembershipModal({ isOpen, onClose }) {
   if (!isOpen) return null
+  const navigate = useNavigate()
   const xhsUrl = 'https://www.xiaohongshu.com/search/result?keyword=%E8%B7%9F%E8%AF%BB%E9%B8%AD%20%E8%8B%B1%E8%AF%AD%E5%8F%A3%E8%AF%AD%E5%AD%A6%E4%B9%A0'
   const handleBackdropClick = (e) => {
     if (e.target.classList.contains('app-modal-backdrop')) onClose?.()
@@ -22,7 +24,8 @@ export default function MembershipModal({ isOpen, onClose }) {
 👉 关注获取最新上线通知和早期优惠`}
         </div>
         <div className="app-modal-actions">
-          <a className="link-btn" href="/register" style={{ marginRight: 'auto' }}>我有兑换码</a>
+          {/* 改为站内导航，避免外链刷新导致 404 */}
+          <button className="link-btn" style={{ marginRight: 'auto' }} onClick={() => { navigate('/register', { state: { mode: 'register' } }); onClose?.() }}>我有兑换码</button>
           <button className="secondary-btn" onClick={onClose}>好的，期待！</button>
           <a className="primary-btn" href={xhsUrl} target="_blank" rel="noreferrer">去小红书关注</a>
         </div>

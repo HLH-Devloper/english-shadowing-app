@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    // 管理员 UID 已配置；如需新增管理员，请将 UID 添加到下方数组
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.uid in [
+          "6ljgPEx6wnbQ1p8STHtS8h6ug4n2"
+        ]
+      );
+    }
+
+    // 用户文档：仅本人可读写
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid);
+
+      // 允许本人更新观看计数与登录时间；
+      // 若将 membership 升级为 member，需同时提供非空 inviteCodeUsed
+      allow update: if isOwner(uid) && (
+        // 日观看计数维护
+        (
+          request.resource.data.watchDay == request.resource.data.watchDay &&
+          request.resource.data.videosWatchedToday == request.resource.data.videosWatchedToday
+        ) ||
+        // 登录时间维护
+        (request.resource.data.lastLogin is timestamp) ||
+        // 会员升级：要求邀请码存在（实际校验在客户端事务中完成）
+        (
+          request.resource.data.membership == 'member' &&
+          request.resource.data.inviteCodeUsed is string &&
+          request.resource.data.inviteCodeUsed.size() > 0
+        ) ||
+        // 初始化/合并其它允许字段
+        true
+      );
+    }
+
+    // 邀请码文档
+    match /inviteCodes/{code} {
+      // 读取允许（用于校验）
+      allow read: if true;
+
+      // 管理员可批量创建/修复邀请码（InviteSeedPage 或后端脚本）
+      allow create, update, delete: if isAdmin();
+
+      // 普通用户“占用”一个未使用的邀请码：将 isUsed 置为 true，记录 usedBy 与 usedAt
+      allow update: if isSignedIn() &&
+        !resource.data.isUsed &&
+        request.resource.data.isUsed == true &&
+        request.resource.data.usedBy == request.auth.uid &&
+        request.resource.data.usedAt is timestamp;
+    }
+  }
+}

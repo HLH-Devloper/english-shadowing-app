@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react'
-import { db } from '../firebase'
+import React, { useMemo, useState, useEffect } from 'react'
+import { db, auth } from '../firebase'
 import { doc, setDoc, serverTimestamp, getDoc, deleteField } from 'firebase/firestore'
 import Toast from './Toast'
+import { onAuthStateChanged } from 'firebase/auth'
+import { useNavigate } from 'react-router-dom'
 
 export default function InviteSeedPage() {
   const [toastMsg, setToastMsg] = useState('')
@@ -11,6 +13,14 @@ export default function InviteSeedPage() {
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState(null)
   const [forceAlignSchema, setForceAlignSchema] = useState(true)
+  // 管理员登录状态与鉴权
+  const [uid, setUid] = useState(null)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, user => setUid(user?.uid || null))
+    return () => unsub()
+  }, [])
+  const isAdmin = uid && uid === import.meta.env.VITE_ADMIN_UID
+  const navigate = useNavigate()
 
   const defaultExpiryStr = useMemo(() => {
     const d = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
@@ -77,6 +87,23 @@ export default function InviteSeedPage() {
     }
   }
 
+  if (!isAdmin) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card" style={{ maxWidth: 560 }}>
+          <div className="auth-header">
+            <h1 className="auth-title">该页面仅限管理员使用</h1>
+            <p className="auth-subtitle">请使用管理员账户登录后再访问</p>
+          </div>
+          <div className="auth-footer" style={{ marginTop: 16, display: 'flex' }}>
+            <button className="link-btn" onClick={() => navigate('/register')}>去登录</button>
+            <button className="link-btn" onClick={() => navigate('/')} style={{ marginLeft: 'auto' }}>返回首页</button>
+          </div>
+          <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="auth-page">
       <div className="auth-card" style={{ maxWidth: 680 }}>
