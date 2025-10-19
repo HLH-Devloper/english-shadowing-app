@@ -41,7 +41,7 @@ export default function RedeemPage() {
               email: user.email || '',
               membership: 'free',
               inviteCodeUsed: '',
-              dailyVideoLimit: 2,
+              dailyVideoLimit: null,
               videosWatchedToday: 0,
               watchDay: formatDate(new Date()),
               videoMaxDurationSeconds: 1200,
