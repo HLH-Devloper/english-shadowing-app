@@ -116,6 +116,8 @@ async function generateByGemini(q) {
     const envModel = (process.env.GEMINI_MODEL || '').trim()
     if (envModel) candidateModels.push(envModel)
     candidateModels.push(
+      // 优先尝试你指定的预览模型（若环境未显式指定也会作为候选）
+      'gemini-2.5-flash-preview-09-2025',
       'gemini-1.5-flash-latest',
       'gemini-1.5-flash-002',
       'gemini-1.5-pro-002',
