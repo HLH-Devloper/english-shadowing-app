@@ -13,16 +13,25 @@
 
 const crypto = require('crypto')
 
-function md5(text) {
-  return crypto.createHash('md5').update(text).digest('hex')
+function sha256(text) {
+  return crypto.createHash('sha256').update(text).digest('hex')
+}
+
+// Youdao v3 签名：sha256(appKey + truncate(q) + salt + curtime + appSecret)
+function truncate(q) {
+  const len = q.length
+  if (len <= 20) return q
+  return q.substring(0, 10) + len + q.substring(len - 10)
 }
 
 function buildYoudaoParams(q, appKey, appSecret) {
   const salt = String(Date.now())
+  const curtime = String(Math.floor(Date.now() / 1000))
+  const signType = 'v3'
   const from = 'en'
   const to = 'zh-CHS'
-  const sign = md5(appKey + q + salt + appSecret)
-  const params = new URLSearchParams({ q, from, to, appKey, salt, sign })
+  const sign = sha256(appKey + truncate(q) + salt + curtime + appSecret)
+  const params = new URLSearchParams({ q, from, to, appKey, salt, curtime, sign, signType })
   return params.toString()
 }
 
