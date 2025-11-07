@@ -100,20 +100,55 @@ function getAdminStatus() {
   }
 }
 
-// 统一限制输出长度（守护）
+// 统一限制输出长度与结构化 senses（守护）
+const ALLOWED_POS = ['adv', 'n', 'adj', 'vt', 'vi', 'prep', 'conj', 'pron', 'num', 'art', 'int', 'other']
+const POS_LABEL = {
+  adv: 'Adv.',
+  n: 'N.',
+  adj: 'Adj.',
+  vt: 'Vt.',
+  vi: 'Vi.',
+  prep: 'Prep.',
+  conj: 'Conj.',
+  pron: 'Pron.',
+  num: 'Num.',
+  art: 'Art.',
+  int: 'Int.',
+  other: 'Other'
+}
+
 function normalizeGeminiDict(input, q) {
   const safe = (v) => (typeof v === 'string' ? v.trim() : '')
   const word = safe(input?.word) || q
   const phonetic = safe(input?.phonetic)
+  // 新结构：senses 为对象数组 { pos, cn }
+  let senses = Array.isArray(input?.senses)
+    ? input.senses
+        .map((s) => ({ pos: safe(s?.pos).toLowerCase(), cn: safe(s?.cn) }))
+        .filter((s) => s.cn)
+    : []
+  // 规范化词性枚举，并附带 label
+  senses = senses.map((s) => {
+    const pos = ALLOWED_POS.includes(s.pos) ? s.pos : 'other'
+    const label = POS_LABEL[pos] || 'Other'
+    return { pos, label, cn: s.cn }
+  })
+  if (senses.length > 8) senses = senses.slice(0, 8)
+
+  // 为前端旧渲染提供回退 explains（不迁移旧缓存，但新数据同时保留）
   let explains = Array.isArray(input?.explains) ? input.explains.map(safe).filter(Boolean) : []
+  if (explains.length === 0 && senses.length > 0) {
+    explains = senses.slice(0, 4).map((s) => `${s.label} ${s.cn}`)
+  }
+  if (explains.length > 4) explains = explains.slice(0, 4)
+
   let examples = Array.isArray(input?.examples)
     ? input.examples
         .map((e) => ({ en: safe(e?.en), zh: safe(e?.zh) }))
         .filter((e) => e.en)
     : []
-  if (explains.length > 4) explains = explains.slice(0, 4)
   if (examples.length > 2) examples = examples.slice(0, 2)
-  return { word, phonetic, explains, examples }
+  return { word, phonetic, senses, explains, examples }
 }
 
 async function lookupFromFirestore(q) {
@@ -122,19 +157,16 @@ async function lookupFromFirestore(q) {
     if (!db) return null
     const ref = db.collection('wordDict').doc(q)
     const snap = await ref.get()
-    if (snap.exists) {
-      const data = snap.data() || {}
+  if (snap.exists) {
+    const data = snap.data() || {}
+      const senses = Array.isArray(data.senses) ? data.senses : []
       const explains = Array.isArray(data.explains) ? data.explains : []
-      if (explains.length > 0) {
-        return {
-          word: q,
-          phonetic: typeof data.phonetic === 'string' ? data.phonetic : '',
-          explains,
-          examples: Array.isArray(data.examples) ? data.examples : [],
-          source: 'firebase'
-        }
+      const examples = Array.isArray(data.examples) ? data.examples : []
+      const phonetic = typeof data.phonetic === 'string' ? data.phonetic : ''
+      if (senses.length > 0 || explains.length > 0) {
+        return { word: q, phonetic, senses, explains, examples, source: 'firebase' }
       }
-    }
+  }
     return null
   } catch (e) {
     console.warn('读取 Firestore 失败', e)
@@ -169,7 +201,7 @@ async function generateByGemini(q) {
           model: name,
           generationConfig: { responseMimeType: 'application/json' }
         })
-        const prompt = `请为英文单词 "${q}" 生成严格的 JSON（仅输出 JSON，不要任何注释或额外文本）。\n结构如下：\n{\n  "word": "${q}",\n  "phonetic": "英 [uk] 美 [us]",\n  "explains": ["中文释义 1", "中文释义 2"],\n  "examples": [{"en": "英文例句", "zh": "中文翻译"}]\n}\n要求：\n- explains 最多 3-4 条，尽量简洁；\n- examples 最多 1-2 条；\n- phonetic 同时给出英式和美式（如果可得），否则留空字符串；\n- 所有中文均为简体中文；\n- 不要输出任何额外文本。`
+        const prompt = `请为英文单词 "${q}" 生成严格的 JSON(Application Programming Interface 响应仅为 JSON；不要输出任何额外文本)。\n字段与约束如下：\n{\n  "word": "${q}",\n  "phonetic": "英 [uk] 美 [us]",\n  "senses": [\n    { "pos": "adv", "cn": "中文义项" },\n    { "pos": "n", "cn": "中文义项" }\n  ],\n  "examples": [{"en": "英文例句", "zh": "中文翻译"}]\n}\n严格要求：\n- senses[*].pos 仅可取以下枚举之一：adv, n, adj, vt, vi, prep, conj, pron, num, art, int, other。\n- phonetic 字段若未知可为空字符串。\n- 中文释义仅放在 senses[*].cn 中，不要输出 explains 字段。\n- 示例最多 2 条。\n- 输出必须是完全合法的 JSON 字符串，不要带注释。`
 
         const result = await model.generateContent(prompt)
         const text = result?.response?.text?.() || ''
@@ -222,6 +254,7 @@ async function writeToFirestore(q, data) {
     const ref = db.collection('wordDict').doc(q)
     const payload = {
       phonetic: data.phonetic || '',
+      senses: Array.isArray(data.senses) ? data.senses : [],
       explains: Array.isArray(data.explains) ? data.explains : [],
       examples: Array.isArray(data.examples) ? data.examples : [],
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
