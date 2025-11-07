@@ -37,6 +37,18 @@ function buildYoudaoDictParams(q, appKey, appSecret) {
   return params.toString()
 }
 
+// 文本翻译接口参数：q、from、to、appKey、salt、curtime、sign、signType（参考官方文档：https://openapi.youdao.com/api）
+function buildYoudaoTransParams(q, appKey, appSecret) {
+  const salt = String(Date.now())
+  const curtime = String(Math.floor(Date.now() / 1000))
+  const signType = 'v3'
+  const from = 'en'
+  const to = 'zh-CHS' // 简体中文
+  const sign = sha256(appKey + truncate(q) + salt + curtime + appSecret)
+  const params = new URLSearchParams({ q, from, to, appKey, salt, curtime, sign, signType })
+  return params.toString()
+}
+
 async function queryYoudao(q) {
   const appKey = process.env.YOUDAO_APP_KEY
   const appSecret = process.env.YOUDAO_APP_SECRET
@@ -47,11 +59,21 @@ async function queryYoudao(q) {
   const url = `https://openapi.youdao.com/v2/dict?${qs}`
   const res = await fetch(url, { method: 'GET' })
   if (!res.ok) {
-    return { error: 'HttpError', status: res.status }
+    // 回退：当词典接口不可用时，尝试文本翻译接口获取中文释义
+    const trans = await queryYoudaoTranslate(q, appKey, appSecret)
+    if (trans && !trans.error) {
+      return trans
+    }
+    return { error: 'HttpError', status: res.status, statusText: res.statusText }
   }
   const json = await res.json()
   // 如果返回包含错误码且不为 0，视为失败（参考官方文档）
   if (json && typeof json.errorCode !== 'undefined' && String(json.errorCode) !== '0') {
+    // 回退：尝试文本翻译接口
+    const trans = await queryYoudaoTranslate(q, appKey, appSecret)
+    if (trans && !trans.error) {
+      return trans
+    }
     return { error: 'YoudaoError', code: String(json.errorCode || '') }
   }
   // v2/dict 的结构为：result: []，其中包含 ec/ee 等词典对象
@@ -86,6 +108,13 @@ async function queryYoudao(q) {
     explains = ec.explains
   }
   // 如果仍为空，最后不再使用翻译接口结果，保持空数组，由前端友好提示
+  // 若中文释义仍为空，则使用文本翻译接口作为兜底（官方翻译接口）
+  if (!explains || explains.length === 0) {
+    const trans = await queryYoudaoTranslate(q, appKey, appSecret)
+    if (trans && !trans.error && Array.isArray(trans.explains) && trans.explains.length > 0) {
+      explains = trans.explains
+    }
+  }
 
   // 常见搭配：从 web 字段中截取前 3~5 条
   let webPhrases = []
@@ -113,6 +142,30 @@ async function queryYoudao(q) {
     explains,
     webPhrases,
     source: 'youdao'
+  }
+}
+
+// 调用有道文本翻译接口，作为词典查询的兜底，以获取基础的中文释义
+async function queryYoudaoTranslate(q, appKey, appSecret) {
+  try {
+    const body = buildYoudaoTransParams(q, appKey, appSecret)
+    const res = await fetch('https://openapi.youdao.com/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body
+    })
+    if (!res.ok) {
+      return { error: 'HttpError', status: res.status, statusText: res.statusText }
+    }
+    const json = await res.json()
+    if (json && String(json.errorCode || '') !== '0') {
+      return { error: 'YoudaoError', code: String(json.errorCode || '') }
+    }
+    const translations = Array.isArray(json.translation) ? json.translation : []
+    const explains = translations.map(t => String(t).trim()).filter(Boolean)
+    return { word: q, phonetic: '', explains, webPhrases: [], source: 'youdao' }
+  } catch (e) {
+    return { error: 'ProxyError', message: String(e?.message || e) }
   }
 }
 
