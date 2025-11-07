@@ -62,6 +62,44 @@ function getDb() {
   }
 }
 
+// 调试：收集环境与 Admin 初始化状态（仅在预览环境使用）
+function getAdminStatus() {
+  const svc = process.env.FIREBASE_SERVICE_ACCOUNT
+  let cfg = { source: 'none', projectId: null, clientEmail: null, hasPrivateKey: false }
+  if (svc) {
+    try {
+      const json = JSON.parse(svc)
+      cfg = {
+        source: 'service_account',
+        projectId: json.project_id || json.projectId || null,
+        clientEmail: json.client_email || null,
+        hasPrivateKey: !!json.private_key
+      }
+    } catch (_) {}
+  } else if (process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT) {
+    cfg = {
+      source: 'env_vars',
+      projectId: process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || null,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL || null,
+      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY
+    }
+  }
+  const hasApp = admin.apps && admin.apps.length > 0
+  const db = getDb()
+  return {
+    hasApp,
+    dbReady: !!db,
+    resolvedProjectId: cfg.projectId,
+    source: cfg.source,
+    envPresence: {
+      FIREBASE_SERVICE_ACCOUNT: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+      FIREBASE_PROJECT_ID: !!process.env.FIREBASE_PROJECT_ID,
+      FIREBASE_CLIENT_EMAIL: !!process.env.FIREBASE_CLIENT_EMAIL,
+      FIREBASE_PRIVATE_KEY: !!process.env.FIREBASE_PRIVATE_KEY
+    }
+  }
+}
+
 // 统一限制输出长度（守护）
 function normalizeGeminiDict(input, q) {
   const safe = (v) => (typeof v === 'string' ? v.trim() : '')
@@ -202,7 +240,13 @@ async function writeToFirestore(q, data) {
 
 export default async function handler(req, res) {
   try {
-    const { word } = req.query || {}
+    const { word, debug } = req.query || {}
+    if (debug === '1') {
+      // 返回当前 Firebase Admin 初始化状态，便于排查为何未写入集合
+      res.setHeader('Cache-Control', 'no-store')
+      res.status(200).json({ debug: getAdminStatus() })
+      return
+    }
     const q = String(word || '').trim().toLowerCase()
     if (!q) {
       res.status(400).json({ error: 'BadRequest', message: '缺少 word 参数' })
