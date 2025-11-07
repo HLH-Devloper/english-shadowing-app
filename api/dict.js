@@ -24,16 +24,17 @@ function truncate(q) {
   return q.substring(0, 10) + len + q.substring(len - 10)
 }
 
-// v2/dict 词典接口参数：q、langType、dicts、appKey、salt、curtime、sign、signType
+// v2/dict 词典接口参数：q、langType、dicts、appKey、salt、curtime、sign、signType、docType
 function buildYoudaoDictParams(q, appKey, appSecret) {
   const salt = String(Date.now())
   const curtime = String(Math.floor(Date.now() / 1000))
   const signType = 'v3'
-  const langType = 'en' // 英文词条
-  // 请求英汉(ec) + 英英(ee) 两种词典，以确保 basic.explains 更丰富；若后续需要汉英可加入 ce
-  const dicts = 'ec,ee'
+  const langType = 'auto' // 按文档支持自动识别，确保句子或特殊词也能正确识别
+  // 根据你的需求，优先只查英汉词典(ec)，以返回更纯粹的中文释义
+  const dicts = 'ec'
   const sign = sha256(appKey + truncate(q) + salt + curtime + appSecret)
-  const params = new URLSearchParams({ q, langType, dicts, appKey, salt, curtime, sign, signType })
+  const docType = 'json'
+  const params = new URLSearchParams({ q, langType, dicts, appKey, salt, curtime, sign, signType, docType })
   return params.toString()
 }
 
@@ -99,13 +100,19 @@ async function queryYoudao(q) {
   else phonetic = basic.phonetic ? `[${basic.phonetic}]` : ''
 
   let explains = []
-  // 中文释义优先：ec.basic.explains
+  // 中文释义优先：ec.basic.explains（文档示例中的基本释义）
   if (ec && ec.basic && Array.isArray(ec.basic.explains) && ec.basic.explains.length > 0) {
     explains = ec.basic.explains
   }
-  // 若 ec 不存在或无 explains，则尝试 ec.explains（部分返回结构将 explains 放在 ec 层级）
+  // 若 ec.basic.explains 不存在，尝试 ec.explains（有些返回把 explains 放在 ec 层级）
   if ((!explains || explains.length === 0) && ec && Array.isArray(ec.explains) && ec.explains.length > 0) {
     explains = ec.explains
+  }
+  // 再次兜底：部分返回将释义放在 wordNet.meanings[].meaning
+  if ((!explains || explains.length === 0) && ec && ec.wordNet && Array.isArray(ec.wordNet.meanings)) {
+    explains = ec.wordNet.meanings
+      .map(m => String(m?.meaning || '').trim())
+      .filter(Boolean)
   }
   // 如果仍为空，最后不再使用翻译接口结果，保持空数组，由前端友好提示
   // 若中文释义仍为空，则使用文本翻译接口作为兜底（官方翻译接口）
@@ -124,7 +131,7 @@ async function queryYoudao(q) {
     if (webArr && webArr.length > 0) {
       const list = webArr.slice(0, 5)
       webPhrases = list.map(item => {
-        // 可能的字段：phrase/text/meaning 等，这里尽量兼容
+        // 按文档：phrase 为词组，meaning 为中文含义
         const key = String(item.phrase || item.text || item.key || '').trim()
         let valueZh
         const val = item.meaning || item.value
