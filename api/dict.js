@@ -1,0 +1,208 @@
+// Vercel Serverless Function: 有道词典代理接口（中文释义优先、包含常见搭配）
+// 说明：读取查询参数 word，经由环境变量中的 AppKey 与 AppSecret 生成签名，
+// 请求有道开放平台词典接口（https://openapi.youdao.com/v2/dict），并按如下规则返回统一结构：
+// {
+//   word: string,              // 词头
+//   phonetic: string,          // 音标（格式：英 [uk] 美 [us]；仅一侧则保留对应一项；若仅 basic.phonetic 则为 [phonetic]）
+//   explains: string[],        // 中文释义（优先 basic.explains，否则 translation 字段作为回退）
+//   webPhrases: { key: string, valueZh?: string }[], // 常见搭配，取 web 字段前 3~5 条
+//   source: 'youdao'
+// }
+// 注意：按用户要求，本函数不再调用 dictionaryapi.dev，不进行英文长解释或例句翻译的兜底。
+// 安全性：不在前端暴露密钥，支持在 Vercel/本地 .env 中配置。
+
+import { createHash } from 'crypto'
+
+function sha256(text) {
+  return createHash('sha256').update(text).digest('hex')
+}
+
+// Youdao v3 签名：sha256(appKey + truncate(q) + salt + curtime + appSecret)
+function truncate(q) {
+  const len = q.length
+  if (len <= 20) return q
+  return q.substring(0, 10) + len + q.substring(len - 10)
+}
+
+// v2/dict 词典接口参数：q、langType、dicts、appKey、salt、curtime、sign、signType、docType
+function buildYoudaoDictParams(q, appKey, appSecret) {
+  const salt = String(Date.now())
+  const curtime = String(Math.floor(Date.now() / 1000))
+  const signType = 'v3'
+  const langType = 'auto' // 按文档支持自动识别，确保句子或特殊词也能正确识别
+  // 根据你的需求，优先只查英汉词典(ec)，以返回更纯粹的中文释义
+  const dicts = 'ec'
+  const sign = sha256(appKey + truncate(q) + salt + curtime + appSecret)
+  const docType = 'json'
+  const params = new URLSearchParams({ q, langType, dicts, appKey, salt, curtime, sign, signType, docType })
+  return params.toString()
+}
+
+// 文本翻译接口参数：q、from、to、appKey、salt、curtime、sign、signType（参考官方文档：https://openapi.youdao.com/api）
+function buildYoudaoTransParams(q, appKey, appSecret) {
+  const salt = String(Date.now())
+  const curtime = String(Math.floor(Date.now() / 1000))
+  const signType = 'v3'
+  const from = 'en'
+  const to = 'zh-CHS' // 简体中文
+  const sign = sha256(appKey + truncate(q) + salt + curtime + appSecret)
+  const params = new URLSearchParams({ q, from, to, appKey, salt, curtime, sign, signType })
+  return params.toString()
+}
+
+async function queryYoudao(q) {
+  const appKey = process.env.YOUDAO_APP_KEY
+  const appSecret = process.env.YOUDAO_APP_SECRET
+  if (!appKey || !appSecret) {
+    return { error: 'MissingCredentials', message: '未配置 Youdao AppKey 或 AppSecret' }
+  }
+  const qs = buildYoudaoDictParams(q, appKey, appSecret)
+  const url = `https://openapi.youdao.com/v2/dict?${qs}`
+  const res = await fetch(url, { method: 'GET' })
+  if (!res.ok) {
+    // 回退：当词典接口不可用时，尝试文本翻译接口获取中文释义
+    const trans = await queryYoudaoTranslate(q, appKey, appSecret)
+    if (trans && !trans.error) {
+      return trans
+    }
+    return { error: 'HttpError', status: res.status, statusText: res.statusText }
+  }
+  const json = await res.json()
+  // 如果返回包含错误码且不为 0，视为失败（参考官方文档）
+  if (json && typeof json.errorCode !== 'undefined' && String(json.errorCode) !== '0') {
+    // 回退：尝试文本翻译接口
+    const trans = await queryYoudaoTranslate(q, appKey, appSecret)
+    if (trans && !trans.error) {
+      return trans
+    }
+    return { error: 'YoudaoError', code: String(json.errorCode || '') }
+  }
+  // v2/dict 的结构为：result: []，其中包含 ec/ee 等词典对象
+  // 我们优先从 ec.basic 读取中文释义与音标；若不存在则尝试 ee.basic 作为兜底（只用于音标，不展示英英长释义）
+  let ec = null
+  let ee = null
+  try {
+    const arr = Array.isArray(json.result) ? json.result : []
+    for (const item of arr) {
+      if (item && item.ec) ec = item.ec
+      if (item && item.ee) ee = item.ee
+    }
+  } catch {}
+
+  const basic = (ec && ec.basic) || (ee && ee.basic) || {}
+  // 字段名在 v2/dict 为 ukPhonetic/usPhonetic/phonetic
+  const uk = basic.ukPhonetic || basic['uk-phonetic'] || ''
+  const us = basic.usPhonetic || basic['us-phonetic'] || ''
+  let phonetic = ''
+  if (uk && us) phonetic = `英 [${uk}] 美 [${us}]`
+  else if (uk) phonetic = `英 [${uk}]`
+  else if (us) phonetic = `美 [${us}]`
+  else phonetic = basic.phonetic ? `[${basic.phonetic}]` : ''
+
+  let explains = []
+  // 中文释义优先：ec.basic.explains（文档示例中的基本释义）
+  if (ec && ec.basic && Array.isArray(ec.basic.explains) && ec.basic.explains.length > 0) {
+    explains = ec.basic.explains
+  }
+  // 若 ec.basic.explains 不存在，尝试 ec.explains（有些返回把 explains 放在 ec 层级）
+  if ((!explains || explains.length === 0) && ec && Array.isArray(ec.explains) && ec.explains.length > 0) {
+    explains = ec.explains
+  }
+  // 再次兜底：部分返回将释义放在 wordNet.meanings[].meaning
+  if ((!explains || explains.length === 0) && ec && ec.wordNet && Array.isArray(ec.wordNet.meanings)) {
+    explains = ec.wordNet.meanings
+      .map(m => String(m?.meaning || '').trim())
+      .filter(Boolean)
+  }
+  // 如果仍为空，最后不再使用翻译接口结果，保持空数组，由前端友好提示
+  // 若中文释义仍为空，则使用文本翻译接口作为兜底（官方翻译接口）
+  if (!explains || explains.length === 0) {
+    const trans = await queryYoudaoTranslate(q, appKey, appSecret)
+    if (trans && !trans.error && Array.isArray(trans.explains) && trans.explains.length > 0) {
+      explains = trans.explains
+    }
+  }
+
+  // 常见搭配：从 web 字段中截取前 3~5 条
+  let webPhrases = []
+  try {
+    // v2/dict 的网络释义位于 ec.web 或顶层 web；优先 ec.web
+    const webArr = (ec && Array.isArray(ec.web) && ec.web.length > 0) ? ec.web : (Array.isArray(json.web) ? json.web : [])
+    if (webArr && webArr.length > 0) {
+      const list = webArr.slice(0, 5)
+      webPhrases = list.map(item => {
+        // 按文档：phrase 为词组，meaning 为中文含义
+        const key = String(item.phrase || item.text || item.key || '').trim()
+        let valueZh
+        const val = item.meaning || item.value
+        if (Array.isArray(val) && val.length > 0) valueZh = String(val[0]).trim()
+        else if (typeof val === 'string' && val) valueZh = String(val).trim()
+        return { key, valueZh }
+      }).filter(p => p.key)
+      if (webPhrases.length > 5) webPhrases = webPhrases.slice(0, 5)
+    }
+  } catch {}
+
+  return {
+    word: q,
+    phonetic,
+    explains,
+    webPhrases,
+    source: 'youdao'
+  }
+}
+
+// 调用有道文本翻译接口，作为词典查询的兜底，以获取基础的中文释义
+async function queryYoudaoTranslate(q, appKey, appSecret) {
+  try {
+    const body = buildYoudaoTransParams(q, appKey, appSecret)
+    const res = await fetch('https://openapi.youdao.com/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body
+    })
+    if (!res.ok) {
+      return { error: 'HttpError', status: res.status, statusText: res.statusText }
+    }
+    const json = await res.json()
+    if (json && String(json.errorCode || '') !== '0') {
+      return { error: 'YoudaoError', code: String(json.errorCode || '') }
+    }
+    const translations = Array.isArray(json.translation) ? json.translation : []
+    const explains = translations.map(t => String(t).trim()).filter(Boolean)
+    return { word: q, phonetic: '', explains, webPhrases: [], source: 'youdao' }
+  } catch (e) {
+    return { error: 'ProxyError', message: String(e?.message || e) }
+  }
+}
+
+export default async function handler(req, res) {
+  try {
+    const { word } = req.query || {}
+    const q = String(word || '').trim().toLowerCase()
+    if (!q) {
+      res.status(400).json({ error: 'BadRequest', message: '缺少 word 参数' })
+      return
+    }
+    const data = await queryYoudao(q)
+    // 统一结构输出；若有 error 则返回友好结构（不做英文词典兜底）
+    if (data && data.error) {
+      res.status(200).json({ word: q, phonetic: '', explains: [], webPhrases: [], source: 'youdao', error: data.error, message: data.message || '' })
+      return
+    }
+    // 预览环境不缓存，避免“Vercel没有反应出来”的错觉；生产环境可适度缓存
+    try {
+      const env = String(process.env.VERCEL_ENV || '').toLowerCase()
+      if (env === 'preview' || env === 'development') {
+        res.setHeader('Cache-Control', 'no-store')
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=300')
+      }
+    } catch {
+      res.setHeader('Cache-Control', 'public, max-age=300')
+    }
+    res.status(200).json(data)
+  } catch (e) {
+    res.status(200).json({ word: '', phonetic: '', explains: [], webPhrases: [], source: 'youdao', error: 'ProxyError', message: String(e?.message || e) })
+  }
+}

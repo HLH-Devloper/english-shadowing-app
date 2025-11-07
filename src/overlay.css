@@ -91,3 +91,49 @@
   border-radius: 0;
   object-fit: contain;
 }
+
+/* 词典浮窗：固定在视频画布右下角，样式与滚动条优化 */
+.dict-popup {
+  position: absolute;
+  right: 24px;
+  bottom: 80px; /* 为字幕与底部控制条留出空间 */
+  max-width: 360px;
+  max-height: 55%; /* 相对于视频容器高度 */
+  overflow: auto;
+  background: #ffffff; /* 白底卡片 */
+  color: #111111; /* 主体深色文字 */
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24); /* 较柔和阴影 */
+  backdrop-filter: blur(3px);
+  z-index: 11; /* 高于字幕与中央按钮 */
+}
+
+/* 滚动条尽量低调 */
+.dict-popup::-webkit-scrollbar { width: 6px; height: 6px; }
+.dict-popup::-webkit-scrollbar-track { background: transparent; }
+.dict-popup::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); border-radius: 4px; }
+.dict-popup { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.18) transparent; }
+
+/* 词典浮窗内部排版 */
+.dict-popup-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.dict-popup-title { font-size: 21px; font-weight: 700; line-height: 1.3; color: #111111; }
+.dict-popup-phonetic { font-size: 16px; color: #555555; font-weight: 600; }
+.dict-popup-phonetic-row { display: flex; align-items: center; gap: 8px; }
+.dict-ipa-label { color: #555555; font-weight: 700; }
+.dict-ipa { color: #555555; }
+.dict-speak-btn { appearance: none; border: none; background: transparent; color: #666666; width: 28px; height: 28px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.dict-speak-btn:hover { background: rgba(0,0,0,0.06); color: #333333; }
+.dict-speak-btn:disabled { color: #bbbbbb; cursor: not-allowed; }
+.dict-speak-icon { width: 16px; height: 16px; display: block; }
+.dict-popup-tip { font-size: 12px; color: #888888; margin-top: 4px; }
+.dict-popup-loading { opacity: 0.9; margin-bottom: 6px; }
+.dict-popup-list { display: grid; gap: 6px; }
+.dict-popup-list-item { line-height: 1.6; font-size: 14.5px; color: #333333; }
+.dict-popup-empty { opacity: 0.9; }
+.dict-popup-subtitle { font-size: 13px; margin-bottom: 4px; font-weight: 700; color: #111111; }
+.dict-popup-example { margin-bottom: 6px; }
+.dict-popup-example-en { font-weight: 600; color: #111111; }
+.dict-popup-example-zh { color: #555555; }
+.dict-popup-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 10px; }
+.dict-popup-link { color: #2563EB; text-decoration: none; }

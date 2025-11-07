@@ -15,6 +15,13 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
+// 调试：在开发模式下输出关键环境变量是否已加载（不包含敏感完整值）
+if (import.meta.env.DEV) {
+  const hasKey = Boolean(import.meta.env.VITE_FIREBASE_API_KEY)
+  // 仅显示是否存在以避免泄露完整值
+  console.log('[firebase env] apiKey loaded:', hasKey)
+}
+
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
