@@ -11,10 +11,10 @@
 // 若有道调用失败或超过配额，则触发英文词典兜底（dictionaryapi.dev），source 标记为 'fallback'。
 // 安全性：不在前端暴露密钥，支持在 Vercel/本地 .env 中配置。
 
-const crypto = require('crypto')
+import { createHash } from 'crypto'
 
 function sha256(text) {
-  return crypto.createHash('sha256').update(text).digest('hex')
+  return createHash('sha256').update(text).digest('hex')
 }
 
 // Youdao v3 签名：sha256(appKey + truncate(q) + salt + curtime + appSecret)
@@ -116,7 +116,7 @@ async function queryFallback(q) {
   }
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
     const { word } = req.query || {}
     const q = String(word || '').trim().toLowerCase()
