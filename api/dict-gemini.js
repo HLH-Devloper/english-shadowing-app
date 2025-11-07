@@ -15,39 +15,51 @@ function ensureAdmin() {
   }
   // 优先使用 FIREBASE_SERVICE_ACCOUNT（JSON 字符串）
   const svc = process.env.FIREBASE_SERVICE_ACCOUNT
-  let credential
+  let credential = null
+  let projectId = null
   if (svc) {
     try {
       const json = JSON.parse(svc)
       credential = admin.credential.cert(json)
+      projectId = json.project_id || json.projectId || null
     } catch (e) {
       console.warn('FIREBASE_SERVICE_ACCOUNT 解析失败', e)
     }
   }
   // 兼容单独变量配置
   if (!credential) {
-    const projectId = process.env.FIREBASE_PROJECT_ID
+    const pid = process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || null
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
     let privateKey = process.env.FIREBASE_PRIVATE_KEY
     if (privateKey) {
       privateKey = privateKey.replace(/\\n/g, '\n')
     }
-    if (projectId && clientEmail && privateKey) {
-      credential = admin.credential.cert({ projectId, clientEmail, privateKey })
+    if (pid && clientEmail && privateKey) {
+      credential = admin.credential.cert({ projectId: pid, clientEmail, privateKey })
+      projectId = pid
     }
   }
-  // 若无凭据，使用应用默认（在 Vercel 一般不可用），后续读写会失败，我们在调用处兜底返回 error
+  // 若仍无凭据，返回 null，让调用方优雅兜底不触发 @google-cloud/firestore 的 ADC(Application Default Credentials) 错误
+  if (!credential) {
+    return null
+  }
   try {
-    return admin.initializeApp({ credential: credential || admin.credential.applicationDefault() })
+    return admin.initializeApp({ credential, projectId: projectId || undefined })
   } catch (e) {
     console.warn('Firebase Admin 初始化失败', e)
-    throw e
+    return null
   }
 }
 
 function getDb() {
   const app = ensureAdmin()
-  return admin.firestore(app)
+  if (!app) return null
+  try {
+    return admin.firestore(app)
+  } catch (e) {
+    console.warn('获取 Firestore 实例失败', e)
+    return null
+  }
 }
 
 // 统一限制输出长度（守护）
@@ -69,6 +81,7 @@ function normalizeGeminiDict(input, q) {
 async function lookupFromFirestore(q) {
   try {
     const db = getDb()
+    if (!db) return null
     const ref = db.collection('wordDict').doc(q)
     const snap = await ref.get()
     if (snap.exists) {
@@ -132,6 +145,7 @@ async function generateByGemini(q) {
 async function writeToFirestore(q, data) {
   try {
     const db = getDb()
+    if (!db) return false
     const ref = db.collection('wordDict').doc(q)
     const payload = {
       phonetic: data.phonetic || '',
