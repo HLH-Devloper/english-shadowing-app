@@ -2,7 +2,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    // 保留 /api 服务端函数，不进行 SPA 重写；其余无扩展名且不在 assets 下的路径重写到 /index.html
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api)(?!assets)(?!.*\\..*).*)", "destination": "/index.html" }
   ],
