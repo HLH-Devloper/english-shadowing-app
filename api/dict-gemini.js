@@ -111,31 +111,64 @@ async function generateByGemini(q) {
   }
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: { responseMimeType: 'application/json' }
-    })
-    const prompt = `请为英文单词 "${q}" 生成严格的 JSON（仅输出 JSON，不要任何注释或额外文本）。\n结构如下：\n{\n  "word": "${q}",\n  "phonetic": "英 [uk] 美 [us]",\n  "explains": ["中文释义 1", "中文释义 2"],\n  "examples": [{"en": "英文例句", "zh": "中文翻译"}]\n}\n要求：\n- explains 最多 3-4 条，尽量简洁；\n- examples 最多 1-2 条；\n- phonetic 同时给出英式和美式（如果可得），否则留空字符串；\n- 所有中文均为简体中文；\n- 不要输出任何额外文本。`
+    // 兼容不同可用模型与版本：优先使用环境变量 GEMINI_MODEL，其次采用一组后备名称
+    const candidateModels = []
+    const envModel = (process.env.GEMINI_MODEL || '').trim()
+    if (envModel) candidateModels.push(envModel)
+    candidateModels.push(
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash-002',
+      'gemini-1.5-pro-002',
+      'gemini-1.5-pro-latest'
+    )
 
-    const result = await model.generateContent(prompt)
-    const text = result?.response?.text?.() || ''
-    if (!text) {
-      return { error: 'EmptyGeminiResponse' }
-    }
-    let parsed
-    try {
-      parsed = JSON.parse(text)
-    } catch (e) {
-      // 再尝试提取可能包裹在代码块中的 JSON
-      const m = text.match(/\{[\s\S]*\}/)
-      if (m) {
-        parsed = JSON.parse(m[0])
-      } else {
-        throw e
+    let lastError = null
+    for (const name of candidateModels) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: name,
+          generationConfig: { responseMimeType: 'application/json' }
+        })
+        const prompt = `请为英文单词 "${q}" 生成严格的 JSON（仅输出 JSON，不要任何注释或额外文本）。\n结构如下：\n{\n  "word": "${q}",\n  "phonetic": "英 [uk] 美 [us]",\n  "explains": ["中文释义 1", "中文释义 2"],\n  "examples": [{"en": "英文例句", "zh": "中文翻译"}]\n}\n要求：\n- explains 最多 3-4 条，尽量简洁；\n- examples 最多 1-2 条；\n- phonetic 同时给出英式和美式（如果可得），否则留空字符串；\n- 所有中文均为简体中文；\n- 不要输出任何额外文本。`
+
+        const result = await model.generateContent(prompt)
+        const text = result?.response?.text?.() || ''
+        if (!text) {
+          lastError = new Error('EmptyGeminiResponse')
+          continue
+        }
+        let parsed
+        try {
+          parsed = JSON.parse(text)
+        } catch (e) {
+          const m = text.match(/\{[\s\S]*\}/)
+          if (m) {
+            parsed = JSON.parse(m[0])
+          } else {
+            throw e
+          }
+        }
+        const data = normalizeGeminiDict(parsed, q)
+        return { ...data, source: 'gemini', model: name }
+      } catch (err) {
+        // 若为 404（模型不存在或不支持 generateContent），尝试下一个候选模型
+        const status = err?.status || err?.code || null
+        if (status === 404) {
+          lastError = err
+          continue
+        }
+        // 若为 403（未设置 API(Application Programming Interface) 密钥或权限不足），直接返回错误
+        if (status === 403) {
+          return { error: 'GeminiPermissionDenied', message: 'Gemini 权限不足或密钥无效', status }
+        }
+        lastError = err
       }
     }
-    const data = normalizeGeminiDict(parsed, q)
-    return { ...data, source: 'gemini' }
+    // 所有候选模型均不可用
+    if (lastError) {
+      return { error: 'GeminiModelUnavailable', message: String(lastError?.message || lastError) }
+    }
+    return { error: 'GeminiUnknownError' }
   } catch (e) {
     console.warn('Gemini 调用失败', e)
     return { error: 'GeminiError', message: String(e?.message || e) }
