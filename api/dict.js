@@ -1,14 +1,14 @@
-// Vercel Serverless Function: 有道词典代理接口（中文释义优先）
+// Vercel Serverless Function: 有道词典代理接口（中文释义优先、包含常见搭配）
 // 说明：读取查询参数 word，经由环境变量中的 AppKey 与 AppSecret 生成签名，
 // 请求有道开放平台接口（https://openapi.youdao.com/api），并按如下规则返回统一结构：
 // {
 //   word: string,              // 词头
-//   phonetic: string,          // 音标（若同时有英式/美式则拼接）
-//   explains: string[],        // 中文释义（优先 basic.explains，否则 translation）
-//   example: string | null,    // 简单例句或短语（可为空）
-//   source: 'youdao'|'fallback'
+//   phonetic: string,          // 音标（格式：英 [uk] 美 [us]；仅一侧则保留对应一项；若仅 basic.phonetic 则为 [phonetic]）
+//   explains: string[],        // 中文释义（优先 basic.explains，否则 translation 字段作为回退）
+//   webPhrases: { key: string, valueZh?: string }[], // 常见搭配，取 web 字段前 3~5 条
+//   source: 'youdao'
 // }
-// 若有道调用失败或超过配额，则触发英文词典兜底（dictionaryapi.dev），source 标记为 'fallback'。
+// 注意：按用户要求，本函数不再调用 dictionaryapi.dev，不进行英文长解释或例句翻译的兜底。
 // 安全性：不在前端暴露密钥，支持在 Vercel/本地 .env 中配置。
 
 import { createHash } from 'crypto'
@@ -57,10 +57,10 @@ async function queryYoudao(q) {
   const uk = basic['uk-phonetic'] || ''
   const us = basic['us-phonetic'] || ''
   let phonetic = ''
-  if (uk && us) phonetic = `UK /${uk}/ · US /${us}/`
-  else if (uk) phonetic = `UK /${uk}/`
-  else if (us) phonetic = `US /${us}/`
-  else phonetic = basic['phonetic'] ? `/${basic['phonetic']}/` : ''
+  if (uk && us) phonetic = `英 [${uk}] 美 [${us}]`
+  else if (uk) phonetic = `英 [${uk}]`
+  else if (us) phonetic = `美 [${us}]`
+  else phonetic = basic['phonetic'] ? `[${basic['phonetic']}]` : ''
 
   let explains = []
   if (Array.isArray(basic.explains) && basic.explains.length > 0) {
@@ -71,12 +71,18 @@ async function queryYoudao(q) {
     explains = [json.translation]
   }
 
-  // 取一条 web 短语作为例子（若存在）
-  let example = null
+  // 常见搭配：从 web 字段中截取前 3~5 条
+  let webPhrases = []
   try {
     if (Array.isArray(json.web) && json.web.length > 0) {
-      const firstWeb = json.web.find(w => Array.isArray(w.value) && w.value.length > 0)
-      if (firstWeb) example = String(firstWeb.value[0])
+      const list = json.web.slice(0, 5)
+      webPhrases = list.map(item => {
+        const key = String(item.key || '').trim()
+        const valueZh = Array.isArray(item.value) && item.value.length > 0 ? String(item.value[0]).trim() : undefined
+        return { key, valueZh }
+      }).filter(p => p.key)
+      // 若条目过多，限制到前 3~5 条
+      if (webPhrases.length > 5) webPhrases = webPhrases.slice(0, 5)
     }
   } catch {}
 
@@ -84,35 +90,8 @@ async function queryYoudao(q) {
     word: q,
     phonetic,
     explains,
-    example,
+    webPhrases,
     source: 'youdao'
-  }
-}
-
-// 兜底：英文免费词典（dictionaryapi.dev）统一结构
-async function queryFallback(q) {
-  try {
-    const alt = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(q)}`)
-    if (!alt.ok) {
-      return { word: q, phonetic: '', explains: [], example: null, source: 'fallback', error: 'FallbackHttpError', status: alt.status }
-    }
-    const arr = await alt.json()
-    const first = Array.isArray(arr) && arr[0] ? arr[0] : null
-    const phonetic = first?.phonetic || (Array.isArray(first?.phonetics) ? (first.phonetics[0]?.text || '') : '')
-    const defs = []
-    if (Array.isArray(first?.meanings)) {
-      for (const m of first.meanings) {
-        if (Array.isArray(m?.definitions)) {
-          for (const d of m.definitions) {
-            if (d?.definition) defs.push(String(d.definition))
-          }
-        }
-      }
-    }
-    const example = (Array.isArray(first?.meanings) && first.meanings[0]?.definitions?.[0]?.example) || null
-    return { word: q, phonetic, explains: defs, example: example ? String(example) : null, source: 'fallback' }
-  } catch (e) {
-    return { word: q, phonetic: '', explains: [], example: null, source: 'fallback', error: 'FallbackError', message: String(e?.message || e) }
   }
 }
 
@@ -124,19 +103,15 @@ export default async function handler(req, res) {
       res.status(400).json({ error: 'BadRequest', message: '缺少 word 参数' })
       return
     }
-    let data = await queryYoudao(q)
-    // 有道失败或无中文释义时，触发兜底（仅作为备用，不影响线上优先级逻辑）
+    const data = await queryYoudao(q)
+    // 统一结构输出；若有 error 则返回友好结构（不做英文词典兜底）
     if (data && data.error) {
-      data = await queryFallback(q)
-    } else if (!Array.isArray(data?.explains) || data.explains.length === 0) {
-      // 如果有道返回没有中文释义，也尝试兜底以给出基本英文解释
-      const fb = await queryFallback(q)
-      // 若兜底有内容，则返回兜底；否则仍返回有道结构
-      if (Array.isArray(fb.explains) && fb.explains.length > 0) data = fb
+      res.status(200).json({ word: q, phonetic: '', explains: [], webPhrases: [], source: 'youdao', error: data.error, message: data.message || '' })
+      return
     }
     res.setHeader('Cache-Control', 'public, max-age=300')
     res.status(200).json(data)
   } catch (e) {
-    res.status(200).json({ error: 'ProxyError', message: String(e?.message || e) })
+    res.status(200).json({ word: '', phonetic: '', explains: [], webPhrases: [], source: 'youdao', error: 'ProxyError', message: String(e?.message || e) })
   }
 }
