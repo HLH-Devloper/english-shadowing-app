@@ -1573,7 +1573,7 @@ body {
 .link-btn { appearance: none; background: transparent; border: none; color: var(--primary); cursor: pointer; }
 
 /* 播放器左侧宽度统一（大屏限制最大宽度） */
-.player-container { gap: 16px; }
+.player-container { gap: 0; } /* 移除左右间距，让视频区域更大 */
 /* 左侧区域根据可用空间自适应，避免固定宽度导致视频过小 */
 .left-panel { flex: 1 1 auto; min-width: 0; }
 /* 画布与播放器铺满左侧区域，与进度条保持同宽 */
