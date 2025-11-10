@@ -536,7 +536,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 0; /* 上下保留黑边 */
+  padding: 0; /* 移除上下黑边，让视频区域更大 */
   min-height: 0; /* 防止初始布局时底部行被挤压 */
 }
 
@@ -1081,22 +1081,25 @@ body {
 /* 播放器优化样式 */
 .player-container {
   display: flex;
-  gap: 16px;
+  gap: 0; /* 移除左右间距，让视频区域更大 */
   height: 100dvh; /* 使用动态视口高度，避免缩放/系统 UI 导致高度计算误差 */
   min-height: 0;   /* 允许子项正确参与高度分配，防止底部行被挤压 */
   overflow: hidden; /* 防止整个页面滚动 */
 }
 
 .left-panel {
-  flex: 3;
+  flex: 1; /* 占据剩余所有空间（除了右侧固定 320px） */
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0; /* 移除内部间距 */
   min-height: 0; /* 允许网格子项正确计算高度 */
 }
 
 .right-panel {
-  flex: 1;
+  width: 320px; /* 固定宽度，保持字幕列表区域不变 */
+  min-width: 320px;
+  flex: none; /* 不参与 flex 分配 */
+  flex-shrink: 0; /* 不允许收缩 */
   display: flex;
   flex-direction: column;
 }
@@ -1105,7 +1108,7 @@ body {
   position: relative;
   background: #000; /* 纯黑背景以匹配视频边缘 */
   border: none;
-  border-radius: 12px;
+  border-radius: 0; /* 移除圆角，让视频区域视觉上更大 */
   /* 改为三段网格：顶部进度条 / 视频画面 / 底部按钮 */
   display: grid;
   grid-template-rows: 44px minmax(0, 1fr) 72px;
