@@ -1100,8 +1100,10 @@ body {
   min-width: 320px;
   flex: none; /* 不参与 flex 分配 */
   flex-shrink: 0; /* 不允许收缩 */
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  background: rgba(0,0,0,0.2);
 }
 
 .video-section {
