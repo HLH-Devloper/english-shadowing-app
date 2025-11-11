@@ -1106,17 +1106,17 @@ body {
   background: rgba(0,0,0,0.2);
 }
 
-.video-section {
+/* 注释掉 grid 布局，使用 overlay.css 中的 flex + absolute 布局以最大化视频区域 */
+/* .video-section {
   position: relative;
-  background: #000; /* 纯黑背景以匹配视频边缘 */
+  background: #000;
   border: none;
-  border-radius: 0; /* 移除圆角，让视频区域视觉上更大 */
-  /* 改为三段网格：顶部进度条 / 视频画面 / 底部按钮 */
+  border-radius: 0;
   display: grid;
   grid-template-rows: 44px minmax(0, 1fr) 72px;
-  padding: 0; /* 使用网格后不需要额外内边距 */
-  min-height: 0; /* 防止初始渲染时网格第三行被覆盖 */
-}
+  padding: 0;
+  min-height: 0;
+} */
 
 .video-player {
   width: 100%;
@@ -1146,12 +1146,12 @@ body {
 .video-section:fullscreen .ted-embed {
   transform: scale(1); /* 全屏时不再额外放大，保持最佳清晰度 */
 }
-/* 嵌入模式：去掉上下黑边以最大化中部画面区域 */
-.video-section.embed-mode {
-  display: grid !important; /* 覆盖 overlay.css 的 flex，使中部画面占满 */
+/* 嵌入模式：overlay.css 的 flex 布局已经实现了最大化画面，无需额外覆盖 */
+/* .video-section.embed-mode {
+  display: grid !important;
   grid-template-rows: 0 minmax(0, 1fr) 0;
   padding: 0 !important;
-}
+} */
 
 /* 跟读练习弹窗样式（Tailwind 回退） */
 .practice-overlay {
@@ -1214,7 +1214,8 @@ body {
 .collapse-arrow { cursor: pointer; user-select: none; display: inline-flex; align-items: center; }
 
 /* 中部视频画面容器：承载 video 与字幕叠加 */
-.video-canvas {
+/* overlay.css 中已定义 .video-canvas，这里移除 grid-row 以兼容 flex 布局 */
+/* .video-canvas {
   grid-row: 2;
   position: relative;
   background: #000;
@@ -1222,11 +1223,11 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  min-height: 0; /* 避免中部区域占满高度导致顶部/底部栏被裁剪 */
+  min-height: 0;
   width: 100%;
   height: 100%;
   margin: 0;
-}
+} */
 
 /* 当判断为硬字幕（视频内烧录）时，为中部视频画面预留安全区，避免底部栏遮挡 */
 .video-section.hardsub-safe .video-canvas {
@@ -1401,11 +1402,11 @@ body {
   opacity: 1;
 }
 
-/* 顶部/底部控制栏改为黑边静态区域（不再覆盖视频） */
-.video-top-controls {
+/* 注释掉 grid 布局的控制栏样式，使用 overlay.css 中的 absolute 定位以覆盖在视频上 */
+/* .video-top-controls {
   grid-row: 1;
   position: static !important;
-  background: #000; /* 顶部黑边 */
+  background: #000;
   padding: 8px 0;
   display: flex;
   align-items: center;
@@ -1416,13 +1417,13 @@ body {
 .video-bottom-controls {
   grid-row: 3;
   position: static !important;
-  background: #000; /* 底部黑边 */
+  background: #000;
   padding: 10px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 10;
-}
+} */
 
 /* 全屏样式与底部控件间距覆盖 */
 .video-section:fullscreen {
