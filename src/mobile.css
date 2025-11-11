@@ -1,0 +1,524 @@
+/* 移动端专用样式 - 方案 B 激进式适配 */
+/* 只在移动端生效，不影响桌面端 */
+
+/* ========================================
+   1. 移动端基础布局
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 全局字体大小调整 */
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
+  }
+
+  /* ========================================
+     2. 播放器页面移动端布局
+     ======================================== */
+
+  /* 播放器容器改为垂直布局 */
+  .player-container {
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* 左侧面板（视频区域）占满屏幕 */
+  .left-panel {
+    flex: 1;
+    width: 100%;
+    min-width: 100%;
+    order: 1;
+  }
+
+  /* 右侧面板改为底部抽屉 */
+  .right-panel {
+    width: 100%;
+    min-width: 100%;
+    max-height: 45vh; /* 最大高度45%视口 */
+    border-left: none;
+    border-top: 2px solid var(--border);
+    order: 2;
+    position: relative;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--card);
+    z-index: 100;
+  }
+
+  /* 抽屉折叠状态 */
+  .right-panel.collapsed {
+    transform: translateY(calc(100% - 56px)); /* 只露出标题栏 */
+  }
+
+  /* 抽屉拖拽手柄 */
+  .subtitle-list-section::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: var(--muted);
+    border-radius: 2px;
+    opacity: 0.5;
+  }
+
+  /* ========================================
+     3. 视频控制按钮移动端优化
+     ======================================== */
+
+  /* 顶部控制栏 */
+  .video-top-controls {
+    padding: 12px 16px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85), transparent);
+  }
+
+  /* 顶部控制按钮 - 增大触摸目标 */
+  .top-control-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+    padding: 10px;
+  }
+
+  /* 隐藏次要按钮，通过菜单访问 */
+  .top-controls-right .top-control-btn:nth-child(n+4) {
+    display: none;
+  }
+
+  /* 底部控制栏 */
+  .video-bottom-controls {
+    padding: 12px 16px;
+    gap: 6px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+    flex-wrap: wrap; /* 允许换行 */
+  }
+
+  /* 底部控制按钮 - 增大触摸目标 */
+  .bottom-control-btn {
+    min-width: 52px;
+    height: 52px;
+    font-size: 18px;
+    padding: 12px 16px;
+  }
+
+  /* 按钮组间距调整 */
+  .bottom-controls-left,
+  .bottom-controls-center,
+  .bottom-controls-right {
+    gap: 6px;
+  }
+
+  /* 中央播放按钮 */
+  .center-play-button {
+    width: 80px;
+    height: 80px;
+  }
+
+  .play-button-icon {
+    font-size: 36px;
+  }
+
+  /* ========================================
+     4. 字幕显示优化
+     ======================================== */
+
+  /* 字幕叠加层 */
+  .subtitle-overlay {
+    bottom: 80px; /* 为底部控制栏留出空间 */
+    padding: 0 20px;
+    max-width: 100%;
+  }
+
+  .subtitle-overlay-original {
+    font-size: 18px;
+    line-height: 1.6;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9),
+                 0 0 4px rgba(0, 0, 0, 0.9);
+  }
+
+  .subtitle-overlay-translation {
+    font-size: 15px;
+    margin-top: 6px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9),
+                 0 0 4px rgba(0, 0, 0, 0.9);
+  }
+
+  /* 字幕列表 */
+  .subtitle-list-section {
+    padding-top: 20px; /* 为拖拽手柄留出空间 */
+  }
+
+  .section-header {
+    padding: 12px 16px 8px;
+    flex-wrap: wrap;
+  }
+
+  .section-header h3 {
+    font-size: 16px;
+  }
+
+  .subtitle-stats {
+    font-size: 12px;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .subtitle-toolbar {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .subtitle-list {
+    max-height: calc(45vh - 120px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* iOS 平滑滚动 */
+  }
+
+  .subtitle-item {
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+
+  .subtitle-original {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .subtitle-translation {
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* ========================================
+     5. 词典弹窗移动端适配
+     ======================================== */
+
+  /* 词典弹窗改为全屏居中 */
+  .dict-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    max-width: 92vw;
+    max-height: 80vh;
+    width: 100%;
+    z-index: 1000;
+    border-radius: 16px;
+  }
+
+  /* 添加遮罩层效果 */
+  .dict-popup::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: -1;
+    backdrop-filter: blur(4px);
+  }
+
+  /* 词典内容区域 */
+  .dict-popup-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dict-popup-title {
+    font-size: 24px;
+  }
+
+  .dict-popup-phonetic {
+    font-size: 16px;
+  }
+
+  /* ========================================
+     6. 跟读练习弹窗移动端优化
+     ======================================== */
+
+  .practice-overlay {
+    padding: 0;
+    align-items: flex-end; /* 从底部弹出 */
+  }
+
+  .practice-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0; /* 顶部圆角 */
+    padding: 20px 16px;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .practice-header {
+    margin-bottom: 16px;
+  }
+
+  .practice-title {
+    font-size: 20px;
+  }
+
+  .practice-target {
+    font-size: 18px;
+    padding: 16px;
+  }
+
+  .practice-wave {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .practice-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .practice-btn {
+    width: 100%;
+    min-width: auto;
+    height: 52px;
+    font-size: 16px;
+  }
+
+  /* ========================================
+     7. 上传页面移动端适配
+     ======================================== */
+
+  .upload-page {
+    padding: 16px 12px;
+    max-width: 100%;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .header-tabs {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tab-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+
+  .file-upload-area {
+    padding: 32px 20px;
+  }
+
+  .upload-icon {
+    font-size: 48px;
+  }
+
+  .upload-title {
+    font-size: 18px;
+  }
+
+  .upload-hint {
+    font-size: 14px;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    width: 100%;
+    padding: 16px 24px;
+    font-size: 16px;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ========================================
+     8. 进度条移动端优化
+     ======================================== */
+
+  .video-progress-slider {
+    height: 4px;
+  }
+
+  .video-progress-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  .video-progress-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ========================================
+     9. 横屏模式优化
+     ======================================== */
+
+  /* 横屏时隐藏字幕列表，全屏显示视频 */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .right-panel {
+      display: none;
+    }
+
+    .left-panel {
+      width: 100%;
+    }
+
+    .subtitle-overlay {
+      bottom: 60px;
+    }
+  }
+
+  /* ========================================
+     10. 触摸优化
+     ======================================== */
+
+  /* 增大所有可点击元素的触摸区域 */
+  button,
+  .subtitle-item,
+  .word {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 移除点击高亮 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 优化滚动性能 */
+  .subtitle-list,
+  .practice-modal {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* ========================================
+     11. 通知和弹窗优化
+     ======================================== */
+
+  .app-toast {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    transform: none;
+    max-width: calc(100vw - 32px);
+  }
+
+  /* ========================================
+     12. 视频全屏优化
+     ======================================== */
+
+  .video-section:fullscreen {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .video-section:fullscreen .right-panel {
+    display: none;
+  }
+
+  .video-section:fullscreen .subtitle-overlay {
+    bottom: 80px;
+  }
+
+  /* ========================================
+     13. 加载和占位优化
+     ======================================== */
+
+  .no-subtitle-panel {
+    padding: 32px 20px;
+  }
+
+  .no-subtitle-title {
+    font-size: 18px;
+  }
+
+  .no-subtitle-desc {
+    font-size: 14px;
+  }
+
+  /* ========================================
+     14. 控制菜单移动端优化
+     ======================================== */
+
+  .control-popup {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    transform: none;
+    border-radius: 20px 20px 0 0;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .popup-title {
+    font-size: 18px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .menu-item {
+    padding: 16px 20px;
+    font-size: 16px;
+  }
+
+  /* ========================================
+     15. 注册和登录页面移动端优化
+     ======================================== */
+
+  .auth-container {
+    padding: 20px 16px;
+    max-width: 100%;
+  }
+
+  .auth-card {
+    padding: 24px 20px;
+  }
+
+  .auth-title {
+    font-size: 24px;
+  }
+
+  .auth-input {
+    padding: 14px 16px;
+    font-size: 16px;
+  }
+
+  .auth-btn {
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+}
+
