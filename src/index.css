@@ -536,7 +536,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 0; /* 上下保留黑边 */
+  padding: 0; /* 移除上下黑边，让视频区域更大 */
   min-height: 0; /* 防止初始布局时底部行被挤压 */
 }
 
@@ -605,9 +605,10 @@ body {
 
 .current-time, .total-time {
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.3px;
 }
 
 .progress-container {
@@ -617,51 +618,71 @@ body {
 
 .video-progress-slider {
   width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.3);
+  height: 3px;
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
+  transition: height 0.2s ease;
+}
+
+.video-progress-slider:hover {
+  height: 5px;
 }
 
 .video-progress-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   background: #7c9cff;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.video-progress-slider:hover::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 2px 8px rgba(124, 156, 255, 0.5);
 }
 
 .video-progress-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   background: #7c9cff;
   border-radius: 50%;
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.video-progress-slider:hover::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 2px 8px rgba(124, 156, 255, 0.5);
 }
 
 .top-control-btn {
   background: transparent;
   color: white;
   border: none;
-  padding: 10px;
+  padding: 6px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 16px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
 }
 
 .top-control-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
 }
 
 /* 底部控制栏 - 整合到视频内 */
@@ -685,46 +706,48 @@ body {
 .bottom-controls-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .bottom-control-btn {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
-  border: 1px solid rgba(255,255,255,0.18);
-  padding: 10px 16px;
-  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  padding: 8px 12px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
-  min-width: 48px; /* 保持所有按钮一致的宽度与间距 */
-  height: 48px;
+  min-width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.35) inset;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .bottom-control-btn:hover {
-  filter: brightness(1.08);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.36);
   transform: translateY(-1px);
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.22) inset, 0 6px 16px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .bottom-control-btn:active {
   transform: translateY(0);
-  filter: brightness(0.98);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* 选中态强调：如倍速被选择时高亮显示 */
 .bottom-control-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.9);
+  border-color: rgba(37, 99, 235, 1);
   color: #ffffff;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.28) inset,
-              0 8px 24px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+              0 4px 16px rgba(37, 99, 235, 0.4);
 }
 
 /* 中央播放按钮 */
@@ -733,30 +756,32 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 80px;
-  height: 80px;
-  background: rgba(0, 0, 0, 0.7);
+  width: 64px;
+  height: 64px;
+  background: rgba(0, 0, 0, 0.75);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.25s ease;
+  backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   z-index: 10;
 }
 
 .center-play-button:hover {
-  background: rgba(0, 0, 0, 0.8);
-  transform: translate(-50%, -50%) scale(1.1);
+  background: rgba(0, 0, 0, 0.85);
+  transform: translate(-50%, -50%) scale(1.08);
   border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .play-button-icon {
-  font-size: 32px;
+  font-size: 28px;
   color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
 /* 叠加字幕（点击词语弹翻译） */
@@ -1081,37 +1106,42 @@ body {
 /* 播放器优化样式 */
 .player-container {
   display: flex;
-  gap: 16px;
+  gap: 0; /* 移除左右间距，让视频区域更大 */
   height: 100dvh; /* 使用动态视口高度，避免缩放/系统 UI 导致高度计算误差 */
   min-height: 0;   /* 允许子项正确参与高度分配，防止底部行被挤压 */
   overflow: hidden; /* 防止整个页面滚动 */
 }
 
 .left-panel {
-  flex: 3;
+  flex: 1; /* 占据剩余所有空间（除了右侧固定 320px） */
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0; /* 移除内部间距 */
   min-height: 0; /* 允许网格子项正确计算高度 */
 }
 
 .right-panel {
-  flex: 1;
+  width: 320px; /* 固定宽度，保持字幕列表区域不变 */
+  min-width: 320px;
+  flex: none; /* 不参与 flex 分配 */
+  flex-shrink: 0; /* 不允许收缩 */
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  background: rgba(0,0,0,0.2);
 }
 
-.video-section {
+/* 注释掉 grid 布局，使用 overlay.css 中的 flex + absolute 布局以最大化视频区域 */
+/* .video-section {
   position: relative;
-  background: #000; /* 纯黑背景以匹配视频边缘 */
+  background: #000;
   border: none;
-  border-radius: 12px;
-  /* 改为三段网格：顶部进度条 / 视频画面 / 底部按钮 */
+  border-radius: 0;
   display: grid;
   grid-template-rows: 44px minmax(0, 1fr) 72px;
-  padding: 0; /* 使用网格后不需要额外内边距 */
-  min-height: 0; /* 防止初始渲染时网格第三行被覆盖 */
-}
+  padding: 0;
+  min-height: 0;
+} */
 
 .video-player {
   width: 100%;
@@ -1141,12 +1171,12 @@ body {
 .video-section:fullscreen .ted-embed {
   transform: scale(1); /* 全屏时不再额外放大，保持最佳清晰度 */
 }
-/* 嵌入模式：去掉上下黑边以最大化中部画面区域 */
-.video-section.embed-mode {
-  display: grid !important; /* 覆盖 overlay.css 的 flex，使中部画面占满 */
+/* 嵌入模式：overlay.css 的 flex 布局已经实现了最大化画面，无需额外覆盖 */
+/* .video-section.embed-mode {
+  display: grid !important;
   grid-template-rows: 0 minmax(0, 1fr) 0;
   padding: 0 !important;
-}
+} */
 
 /* 跟读练习弹窗样式（Tailwind 回退） */
 .practice-overlay {
@@ -1209,7 +1239,8 @@ body {
 .collapse-arrow { cursor: pointer; user-select: none; display: inline-flex; align-items: center; }
 
 /* 中部视频画面容器：承载 video 与字幕叠加 */
-.video-canvas {
+/* overlay.css 中已定义 .video-canvas，这里移除 grid-row 以兼容 flex 布局 */
+/* .video-canvas {
   grid-row: 2;
   position: relative;
   background: #000;
@@ -1217,11 +1248,11 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  min-height: 0; /* 避免中部区域占满高度导致顶部/底部栏被裁剪 */
+  min-height: 0;
   width: 100%;
   height: 100%;
   margin: 0;
-}
+} */
 
 /* 当判断为硬字幕（视频内烧录）时，为中部视频画面预留安全区，避免底部栏遮挡 */
 .video-section.hardsub-safe .video-canvas {
@@ -1396,11 +1427,11 @@ body {
   opacity: 1;
 }
 
-/* 顶部/底部控制栏改为黑边静态区域（不再覆盖视频） */
-.video-top-controls {
+/* 注释掉 grid 布局的控制栏样式，使用 overlay.css 中的 absolute 定位以覆盖在视频上 */
+/* .video-top-controls {
   grid-row: 1;
   position: static !important;
-  background: #000; /* 顶部黑边 */
+  background: #000;
   padding: 8px 0;
   display: flex;
   align-items: center;
@@ -1411,13 +1442,13 @@ body {
 .video-bottom-controls {
   grid-row: 3;
   position: static !important;
-  background: #000; /* 底部黑边 */
+  background: #000;
   padding: 10px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 10;
-}
+} */
 
 /* 全屏样式与底部控件间距覆盖 */
 .video-section:fullscreen {
@@ -1440,21 +1471,23 @@ body {
 /* 统一分组之间与按钮的间距 */
 .video-bottom-controls {
   justify-content: flex-start !important;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* 循环计数徽标 */
 .loop-count-badge {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.18);
   color: #fff;
-  border-radius: 12px;
-  min-width: 22px;
-  height: 22px;
+  border-radius: 10px;
+  min-width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
-  font-size: 12px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 /* 全屏按钮独立置于最右侧 */
@@ -1570,7 +1603,7 @@ body {
 .link-btn { appearance: none; background: transparent; border: none; color: var(--primary); cursor: pointer; }
 
 /* 播放器左侧宽度统一（大屏限制最大宽度） */
-.player-container { gap: 16px; }
+.player-container { gap: 0; } /* 移除左右间距，让视频区域更大 */
 /* 左侧区域根据可用空间自适应，避免固定宽度导致视频过小 */
 .left-panel { flex: 1 1 auto; min-width: 0; }
 /* 画布与播放器铺满左侧区域，与进度条保持同宽 */
