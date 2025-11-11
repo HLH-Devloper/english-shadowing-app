@@ -16,8 +16,8 @@
   top: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
-  padding: 12px 20px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent);
+  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -30,12 +30,12 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-  padding: 12px 20px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   z-index: 10;
 }
 
