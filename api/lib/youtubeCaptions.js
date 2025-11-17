@@ -5,7 +5,7 @@ export async function getCaptions(videoId, lang = 'en') {
 
   const listXml = await fetchTimedText(`https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(videoId)}`)
   const tracks = parseTrackListXml(listXml)
-  const picked = pickTrack(tracks, lang)
+  const picked = pickTrackAdvanced(tracks, lang)
 
   const langCode = picked?.lang_code || lang
   const isAuto = picked?.kind === 'asr'
@@ -28,6 +28,16 @@ export async function getCaptions(videoId, lang = 'en') {
   }
 
   if (!segments || segments.length === 0) {
+    // 尝试 vtt
+    try {
+      const vttUrl = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=vtt`
+      const vttText = await fetchTimedText(vttUrl)
+      const vttSegs = parseVtt(vttText)
+      if (vttSegs && vttSegs.length) segments = vttSegs
+    } catch {}
+  }
+
+  if (!segments || segments.length === 0) {
     const xmlUrl = `https://www.youtube.com/api/timedtext?${baseQuery}`
     const xmlText = await fetchTimedText(xmlUrl)
     segments = parseXmlCaptions(xmlText)
@@ -35,7 +45,7 @@ export async function getCaptions(videoId, lang = 'en') {
 
   return {
     segments: normalizeSegments(segments),
-    meta: { lang: langCode, hasAuto: !!isAuto }
+    meta: { lang: langCode, hasAuto: !!isAuto, tracks }
   }
 }
 
@@ -78,13 +88,18 @@ function getAttr(attrs, key) {
   return m ? m[1] : undefined
 }
 
-function pickTrack(tracks, desired) {
+function pickTrackAdvanced(tracks, desired) {
   if (!Array.isArray(tracks) || tracks.length === 0) return null
-  const desiredLower = (desired || '').toLowerCase()
-  const byExact = tracks.find(t => (t.lang_code || '').toLowerCase() === desiredLower)
-  if (byExact) return byExact
-  const byEn = tracks.find(t => (t.lang_code || '').startsWith('en'))
-  if (byEn) return byEn
+  const langsPriority = []
+  const d = (desired || '').toLowerCase()
+  if (d) langsPriority.push(d)
+  langsPriority.push('en', 'en-us', 'en-gb', 'zh-hans', 'zh-hant', 'zh')
+  for (const code of langsPriority) {
+    const hit = tracks.find(t => (t.lang_code || '').toLowerCase() === code)
+    if (hit) return hit
+  }
+  const enPrefix = tracks.find(t => (t.lang_code || '').toLowerCase().startsWith('en'))
+  if (enPrefix) return enPrefix
   return tracks[0]
 }
 
@@ -115,6 +130,42 @@ function parseXmlCaptions(xml) {
     if (text) out.push({ start, end, original: text })
   }
   return out
+}
+
+function parseVtt(vtt) {
+  if (!vtt || !/^WEBVTT/m.test(vtt)) return []
+  const lines = vtt.replace(/\r\n/g, '\n').split('\n')
+  const out = []
+  let i = 0
+  while (i < lines.length) {
+    // 跳过空行与说明行
+    if (!lines[i].trim() || /^WEBVTT/.test(lines[i])) { i++; continue }
+    // 可选的编号行
+    let timeLine = lines[i].trim()
+    if (!timeLine.includes('-->') && i + 1 < lines.length) { i++; timeLine = lines[i].trim() }
+    if (!timeLine.includes('-->')) { i++; continue }
+    const m = timeLine.match(/([0-9:.]+)\s*-->\s*([0-9:.]+)/)
+    if (!m) { i++; continue }
+    const start = vttTimeToSeconds(m[1])
+    const end = vttTimeToSeconds(m[2])
+    i++
+    const textLines = []
+    while (i < lines.length && lines[i].trim()) { textLines.push(lines[i]); i++ }
+    const text = cleanText(textLines.join('\n'))
+    if (text) out.push({ start, end, original: text })
+    // 跳过段落结束的空行
+    while (i < lines.length && !lines[i].trim()) i++
+  }
+  return out
+}
+
+function vttTimeToSeconds(s) {
+  const parts = String(s).trim().split(':')
+  if (parts.length !== 3) return 0
+  const h = parseInt(parts[0], 10) || 0
+  const m = parseInt(parts[1], 10) || 0
+  const sec = parseFloat(parts[2]) || 0
+  return h * 3600 + m * 60 + sec
 }
 
 function decodeEntities(s) {

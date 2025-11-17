@@ -98,17 +98,23 @@ function parseInnertubeTranscript(json) {
 }
 
 export default async function handler(req, res) {
+  const videoIdFromQuery = req.query.videoId || req.body.videoId;
+  console.log(`[youtube-transcript] Received request for videoId: ${videoIdFromQuery}`);
   try {
     const { videoId, lang } = (req.method === 'GET' ? req.query : req.body) || {}
     if (!videoId || typeof videoId !== 'string') {
-      res.status(400).json({ error: 'missing videoId' })
-      return
+      return res.status(400).json({ error: 'missing videoId' })
     }
 
+    console.log(`[youtube-transcript] Fetching HTML for videoId: ${videoId}`);
     const html = await fetchHtml(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`)
+    console.log(`[youtube-transcript] Successfully fetched HTML.`);
+
     const ytcfg = getYtcfg(html) || {}
     const apiKey = ytcfg?.INNERTUBE_API_KEY || ''
     const clientVersion = ytcfg?.INNERTUBE_CONTEXT?.client?.clientVersion || '2.20241101.00.00'
+    console.log(`[youtube-transcript] Extracted apiKey: ${apiKey ? 'OK' : 'FAIL'}`);
+
     const ytInitialData = extractJson(html, 'var ytInitialData = ', ';') || extractJson(html, 'window["ytInitialData"] = ', ';') || null
     const ytInitialPlayerResponse = extractJson(html, 'var ytInitialPlayerResponse = ', ';') || extractJson(html, 'window["ytInitialPlayerResponse"] = ', ';') || null
     const tracks = parseCaptionTracks(ytInitialPlayerResponse)
@@ -116,12 +122,16 @@ export default async function handler(req, res) {
     let segments = []
     let source = 'innertube'
     let params = parseTranscriptParams(ytInitialData)
+    console.log(`[youtube-transcript] Extracted transcript params: ${params ? 'OK' : 'FAIL'}`);
 
     if (apiKey && params) {
       try {
+        console.log(`[youtube-transcript] Querying Innertube API...`);
         const json = await queryInnertubeTranscript(apiKey, clientVersion, params, (lang || 'en'))
         segments = parseInnertubeTranscript(json)
+        console.log(`[youtube-transcript] Innertube returned ${segments.length} segments.`);
       } catch (e) {
+        console.warn(`[youtube-transcript] Innertube query failed, falling back to timedtext. Error: ${e.message}`);
         source = 'timedtext'
       }
     } else {
@@ -129,13 +139,16 @@ export default async function handler(req, res) {
     }
 
     if (!Array.isArray(segments) || segments.length === 0) {
+      console.log(`[youtube-transcript] No segments from Innertube, trying fallback captionsSvc.`);
       const fallback = await captionsSvc.getCaptions(videoId, typeof lang === 'string' ? lang : 'en')
       segments = fallback.segments || []
+      console.log(`[youtube-transcript] Fallback returned ${segments.length} segments.`);
     }
 
     res.setHeader('Cache-Control', 'public, max-age=120, s-maxage=600')
     res.status(200).json({ segments, meta: { lang: lang || 'en', tracks, source } })
   } catch (e) {
-    res.status(200).json({ segments: [], meta: { tracks: [] }, error: 'fetch_failed', message: String(e && e.message || e) })
+    console.error('[youtube-transcript] CRITICAL ERROR:', e);
+    res.status(500).json({ segments: [], meta: { tracks: [] }, error: 'fetch_failed', message: String(e && e.message || e) })
   }
 }
