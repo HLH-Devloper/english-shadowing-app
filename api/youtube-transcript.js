@@ -4,7 +4,9 @@ async function fetchHtml(url) {
   const res = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
-      'Accept-Language': 'en-US,en;q=0.9'
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.youtube.com/',
+      'Cookie': 'CONSENT=YES+'
     }
   })
   if (!res.ok) throw new Error(`watch fetch failed: ${res.status} ${res.statusText}`)
@@ -134,6 +136,9 @@ export async function getTranscript({ videoId, lang }) {
     console.log(`[youtube-transcript] No segments from Innertube, trying fallback captionsSvc.`);
     const fallback = await captionsSvc.getCaptions(videoId, typeof lang === 'string' ? lang : 'en')
     segments = fallback.segments || []
+    if (!Array.isArray(tracks) || tracks.length === 0) {
+      tracks = Array.isArray(fallback?.meta?.tracks) ? fallback.meta.tracks : []
+    }
     console.log(`[youtube-transcript] Fallback returned ${segments.length} segments.`);
   }
 
@@ -150,7 +155,7 @@ export default async function handler(req, res) {
     }
 
     const result = await getTranscript({ videoId, lang });
-    res.setHeader('Cache-Control', 'public, max-age=120, s-maxage=600')
+    res.setHeader('Cache-Control', 'no-store')
     res.status(200).json(result)
   } catch (e) {
     console.error('[youtube-transcript] CRITICAL ERROR:', e);

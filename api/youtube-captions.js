@@ -17,6 +17,12 @@ export default async function handler(req, res) {
         res.status(200).json(data)
         return
       }
+      // 即使没有抓到具体段落，也要把可选轨道返回给前端用于选择
+      if (Array.isArray(data?.meta?.tracks) && data.meta.tracks.length > 0) {
+        res.setHeader('Cache-Control', 'public, max-age=120, s-maxage=600')
+        res.status(200).json(data)
+        return
+      }
     } catch (e) {
       console.warn('[youtube-captions] getTranscript failed, falling back to public timedtext', e.message)
     }
