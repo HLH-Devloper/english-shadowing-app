@@ -10,7 +10,11 @@ export async function getCaptions(videoId, lang = 'en') {
   const langCode = picked?.lang_code || lang
   const isAuto = picked?.kind === 'asr'
 
-  const srv3Url = `https://www.youtube.com/api/timedtext?lang=${encodeURIComponent(langCode)}&v=${encodeURIComponent(videoId)}&fmt=srv3`
+  const commonParams = [`lang=${encodeURIComponent(langCode)}`, `v=${encodeURIComponent(videoId)}`]
+  if (picked?.name) commonParams.push(`name=${encodeURIComponent(picked.name)}`)
+  if (picked?.kind) commonParams.push(`kind=${encodeURIComponent(picked.kind)}`)
+  const baseQuery = commonParams.join('&')
+  const srv3Url = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=srv3`
   let segments = null
 
   try {
@@ -24,7 +28,7 @@ export async function getCaptions(videoId, lang = 'en') {
   }
 
   if (!segments || segments.length === 0) {
-    const xmlUrl = `https://www.youtube.com/api/timedtext?lang=${encodeURIComponent(langCode)}&v=${encodeURIComponent(videoId)}`
+    const xmlUrl = `https://www.youtube.com/api/timedtext?${baseQuery}`
     const xmlText = await fetchTimedText(xmlUrl)
     segments = parseXmlCaptions(xmlText)
   }
