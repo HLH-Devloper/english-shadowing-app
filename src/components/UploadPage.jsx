@@ -32,6 +32,7 @@ export default function UploadPage() {
   const [currentUser, setCurrentUser] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
   const [tedUrl, setTedUrl] = useState('')
+  const [youtubeUrl, setYoutubeUrl] = useState('')
   // 主题下拉已移除：保留页面加载时的默认主题或本地保存主题，由 main.jsx 负责初始化
 
   // TED：提取嵌入 talkId（官方嵌入用）
@@ -45,10 +46,29 @@ export default function UploadPage() {
     }
   }
 
+  // 提取 YouTube 视频的 videoId(Identifier)
+  const extractYouTubeVideoId = (url) => {
+    if (!url) return null
+    try {
+      const u = String(url).trim()
+      let m
+      if ((m = u.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/))) return m[1]
+      if ((m = u.match(/[?&]v=([A-Za-z0-9_-]{6,})/))) return m[1]
+      if ((m = u.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/))) return m[1]
+      return null
+    } catch { return null }
+  }
+
   const openTedInPlayer = (urlOrId) => {
     const talkId = (urlOrId && urlOrId.includes('ted.com')) ? extractTEDEmbedId(urlOrId) : urlOrId
     if (!talkId) return
     navigate('/player', { state: { useTedEmbed: true, tedTalkId: talkId } })
+  }
+
+  const openYouTubeInPlayer = (inputUrl) => {
+    const vid = extractYouTubeVideoId(inputUrl)
+    if (!vid) { showNotice('请输入有效的 YouTube 链接', 'warning'); return }
+    navigate('/player', { state: { source: 'youtube', videoId: vid } })
   }
 
   // 超长文件名中间省略，避免撑乱布局
@@ -257,12 +277,23 @@ export default function UploadPage() {
         </div>
       )}
 
-      {/* TED 分区：暂未开放，与影视模块一致为占位提示 */}
+      {/* TED 分区：支持输入 YouTube 链接并进入播放器 */}
       {activeTab === 'ted' && (
         <div className="tab-content" role="tabpanel" aria-label="TED 演讲">
-          <div className="section" style={{ textAlign: 'center', padding: '28px 0' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>功能开发中，敬请期待</div>
-            <div style={{ color: 'var(--muted)', marginTop: 8 }}>TED 模块正在适配中，将提供官方演讲的学习与跟读体验</div>
+          <div className="section" style={{ padding: '20px' }}>
+            <div className="input-row" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <input
+                type="text"
+                className="text-input"
+                placeholder="粘贴 YouTube 视频链接，例如：https://www.youtube.com/watch?v=xxxxx"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                aria-label="输入 YouTube 链接"
+                style={{ flex: 1 }}
+              />
+              <button className="primary-btn" onClick={() => openYouTubeInPlayer(youtubeUrl)}>播放</button>
+            </div>
+            <div className="hint-text" style={{ marginTop: 8 }}>仅用于个人学习。若无字幕或抓取失败，将在播放器中提示并可上传本地字幕继续学习。</div>
           </div>
         </div>
       )}

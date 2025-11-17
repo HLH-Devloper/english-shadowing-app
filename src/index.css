@@ -1189,6 +1189,25 @@ body {
   padding: 16px; /* 让弹窗在小屏有上下留白，避免被遮挡 */
   z-index: 10000;
 }
+
+/* YouTube 嵌入：容器与 iframe 尺寸填满中间主区域 */
+.yt-embed-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#yt-player { width: 100%; height: 100%; }
+#yt-player iframe,
+.yt-embed-wrapper iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
 .practice-modal {
   width: 520px; /* 调整到更宽以匹配红框范围 */
   max-width: 92vw;
