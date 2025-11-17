@@ -1,4 +1,4 @@
-import captionsSvc from './lib/youtubeCaptions'
+import captionsSvc from './lib/youtubeCaptions.js'
 
 async function fetchHtml(url) {
   const res = await fetch(url, {
