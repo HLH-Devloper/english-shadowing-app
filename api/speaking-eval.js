@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   try {
     const { sentenceId, original, translation, userText, userId } = req.body || {}
     const apiKey = process.env.GEMINI_API_KEY || ''
-    if (!apiKey) { res.status(500).json({ error: 'Missing GEMINI_API_KEY' }); return }
+    if (!apiKey) { res.status(401).json({ error: 'GEMINI_API_KEY 未配置或无效' }); return }
     const genai = new GoogleGenerativeAI(apiKey)
     const model = genai.getGenerativeModel({ model: 'gemini-1.5-flash' })
     const prompt = [
@@ -16,7 +16,9 @@ export default async function handler(req, res) {
       'Output strictly in JSON with keys: score(number), rubric(object: fluency, accuracy, vocabulary, grammar), summary(string, zh), correction(string, en), suggestions(array of string, en).'
     ].join('\n')
     const result = await model.generateContent(prompt)
-    const text = result?.response?.text?.() || ''
+    let text = result?.response?.text?.() || ''
+    text = String(text || '').trim()
+    if (text.startsWith('```')) { text = text.replace(/```json|```/g, '').trim() }
     let data = null
     try { data = JSON.parse(text) } catch { data = null }
     if (!data || typeof data !== 'object') {
