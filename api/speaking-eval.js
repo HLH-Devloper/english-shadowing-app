@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     } catch {
       payload = {}
     }
-    const { sentenceId, original, translation, userText, userId } = payload
+    const { sentenceId, original, translation, userText, userId, preference } = payload
     const apiKey = process.env.GEMINI_API_KEY || ''
     if (!apiKey) { res.status(401).json({ error: 'GEMINI_API_KEY 未配置或无效' }); return }
   const genai = new GoogleGenerativeAI(apiKey)
@@ -26,12 +26,14 @@ export default async function handler(req, res) {
   for (const name of models) {
     try {
       const model = genai.getGenerativeModel({ model: name, generationConfig: { responseMimeType: 'application/json' } })
+      const pref = String(preference || 'daily').toLowerCase() === 'work' ? 'work' : 'daily'
       const prompt = [
         'You are an English speaking coach. Evaluate the user\'s paraphrase against the reference sentence. Return concise feedback in Chinese and improved phrasing suggestions in English. Provide a numeric overall score (0-5) and four sub-scores: fluency, accuracy, vocabulary, grammar.',
         `Reference (English): ${String(original || '').trim()}`,
         `Reference (Chinese): ${String(translation || '').trim()}`,
         `User paraphrase: ${String(userText || '').trim()}`,
-        'Output strictly in JSON with keys: score(number), rubric(object: fluency, accuracy, vocabulary, grammar), summary(string, zh), correction(string, en), suggestions(array of string, en).'
+        `Preference: ${pref} (daily = casual everyday speech with natural emotion; work = polite, formal, and euphemistic register suitable for workplace or formal sharing).`,
+        'Output strictly in JSON with keys: score(number), rubric(object: fluency, accuracy, vocabulary, grammar), overview(string, zh), upgrades(object: { basic: { text:string, explain:string }, daily: { text:string, explain:string }, work: { text:string, explain:string } }), practice(array of string, en), preferenceEcho(string in [daily, work]). Do NOT include additional text outside JSON.'
       ].join('\n')
       const result = await model.generateContent(prompt)
       let text = String(result?.response?.text?.() || '').trim()
@@ -67,9 +69,17 @@ export default async function handler(req, res) {
         vocabulary: Number(data?.rubric?.vocabulary || 0),
         grammar: Number(data?.rubric?.grammar || 0)
       },
-      summary: String(data.summary || ''),
-      correction: String(data.correction || ''),
-      suggestions: Array.isArray(data.suggestions) ? data.suggestions.slice(0, 3) : [],
+      overview: String(data.overview || ''),
+      upgrades: {
+        basic: { text: String(data?.upgrades?.basic?.text || ''), explain: String(data?.upgrades?.basic?.explain || '') },
+        daily: { text: String(data?.upgrades?.daily?.text || ''), explain: String(data?.upgrades?.daily?.explain || '') },
+        work: { text: String(data?.upgrades?.work?.text || ''), explain: String(data?.upgrades?.work?.explain || '') }
+      },
+      practice: Array.isArray(data.practice) ? data.practice.slice(0, 4) : [],
+      preferenceEcho: String(data.preferenceEcho || pref),
+      summary: String(data.overview || ''),
+      correction: String(data?.upgrades?.basic?.text || ''),
+      suggestions: [String(data?.upgrades?.daily?.text || ''), String(data?.upgrades?.work?.text || '')].filter(Boolean).slice(0, 3),
       refs: { original: String(original || ''), translation: String(translation || '') },
       sentenceId: String(sentenceId || '')
     })

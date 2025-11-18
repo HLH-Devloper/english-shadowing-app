@@ -3,6 +3,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 export default function SpeakingChatPanel({ sentence, getMessages, onSend, onClear, loadMessages }) {
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
+  const [preference, setPreference] = useState(() => {
+    try { return localStorage.getItem('speakingPref') || 'daily' } catch { return 'daily' }
+  })
   const msgEndRef = useRef(null)
   const messages = useMemo(() => {
     if (!sentence?.id) return [{ role: 'system', content: '请在字幕列表中选择一句话' }]
@@ -10,12 +13,15 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
   }, [sentence, getMessages])
   useEffect(() => { if (sentence?.id) loadMessages?.(sentence.id) }, [sentence?.id])
   useEffect(() => { if (msgEndRef.current) msgEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [messages?.length])
+  useEffect(() => {
+    try { localStorage.setItem('speakingPref', preference) } catch {}
+  }, [preference])
   const handleSend = async () => {
     const text = String(inputText || '').trim()
     if (!text || !sentence?.id || sending) return
     setSending(true)
     setInputText('')
-    try { await onSend?.(sentence.id, text) } finally { setSending(false) }
+    try { await onSend?.(sentence.id, text, preference) } finally { setSending(false) }
   }
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
@@ -42,6 +48,10 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
         <div ref={msgEndRef} />
       </div>
       <div className="chat-input-bar">
+        <div className="chat-preference">
+          <button className={`pref-btn ${preference === 'daily' ? 'active' : ''}`} onClick={() => setPreference('daily')}>日常</button>
+          <button className={`pref-btn ${preference === 'work' ? 'active' : ''}`} onClick={() => setPreference('work')}>职场</button>
+        </div>
         <textarea
           className="chat-input"
           placeholder="用英文表达你的意思…"
