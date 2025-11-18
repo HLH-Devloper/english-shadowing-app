@@ -3,45 +3,61 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method Not Allowed' }); return }
   try {
-    const { sentenceId, original, translation, userText, userId } = req.body || {}
+    let payload = {}
+    try {
+      if (typeof req.body === 'string') {
+        payload = JSON.parse(req.body)
+      } else {
+        payload = req.body || {}
+      }
+    } catch {
+      payload = {}
+    }
+    const { sentenceId, original, translation, userText, userId } = payload
     const apiKey = process.env.GEMINI_API_KEY || ''
     if (!apiKey) { res.status(401).json({ error: 'GEMINI_API_KEY 未配置或无效' }); return }
   const genai = new GoogleGenerativeAI(apiKey)
   const models = []
   const envModel = (process.env.GEMINI_MODEL || '').trim()
   if (envModel) models.push(envModel)
-  models.push('gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro-002')
-  let text = ''
+  models.push('gemini-2.5-flash-preview-09-2025', 'gemini-1.5-flash-latest', 'gemini-1.5-flash-002', 'gemini-1.5-pro-002', 'gemini-1.5-pro-latest')
+  let parsed = null
   let lastErr = null
   for (const name of models) {
     try {
       const model = genai.getGenerativeModel({ model: name, generationConfig: { responseMimeType: 'application/json' } })
       const prompt = [
-      'You are an English speaking coach. Evaluate the user\'s paraphrase against the reference sentence. Return concise feedback in Chinese and improved phrasing suggestions in English. Provide a numeric overall score (0-5) and four sub-scores: fluency, accuracy, vocabulary, grammar.',
-      `Reference (English): ${String(original || '').trim()}`,
-      `Reference (Chinese): ${String(translation || '').trim()}`,
-      `User paraphrase: ${String(userText || '').trim()}`,
-      'Output strictly in JSON with keys: score(number), rubric(object: fluency, accuracy, vocabulary, grammar), summary(string, zh), correction(string, en), suggestions(array of string, en).'
+        'You are an English speaking coach. Evaluate the user\'s paraphrase against the reference sentence. Return concise feedback in Chinese and improved phrasing suggestions in English. Provide a numeric overall score (0-5) and four sub-scores: fluency, accuracy, vocabulary, grammar.',
+        `Reference (English): ${String(original || '').trim()}`,
+        `Reference (Chinese): ${String(translation || '').trim()}`,
+        `User paraphrase: ${String(userText || '').trim()}`,
+        'Output strictly in JSON with keys: score(number), rubric(object: fluency, accuracy, vocabulary, grammar), summary(string, zh), correction(string, en), suggestions(array of string, en).'
       ].join('\n')
       const result = await model.generateContent(prompt)
-      text = String(result?.response?.text?.() || '').trim()
-      if (text) break
+      let text = String(result?.response?.text?.() || '').trim()
+      if (!text) { lastErr = new Error('EmptyGeminiResponse'); continue }
+      if (text.startsWith('```')) { text = text.replace(/```json|```/g, '').trim() }
+      try {
+        parsed = JSON.parse(text)
+      } catch (e) {
+        const m = text.match(/\{[\s\S]*\}/)
+        if (m) {
+          parsed = JSON.parse(m[0])
+        } else {
+          throw e
+        }
+      }
+      if (parsed && typeof parsed === 'object') break
     } catch (e) {
       lastErr = e
       continue
     }
   }
-  if (!text) {
+  if (!parsed) {
     res.status(200).json({ score: 0, rubric: { fluency: 0, accuracy: 0, vocabulary: 0, grammar: 0 }, summary: '评估服务暂不可用', correction: '', suggestions: [] })
     return
   }
-  if (text.startsWith('```')) { text = text.replace(/```json|```/g, '').trim() }
-    let data = null
-    try { data = JSON.parse(text) } catch { data = null }
-    if (!data || typeof data !== 'object') {
-      res.status(200).json({ score: 0, rubric: { fluency: 0, accuracy: 0, vocabulary: 0, grammar: 0 }, summary: '暂时无法解析评估结果', correction: '', suggestions: [] })
-      return
-    }
+    const data = parsed
     res.setHeader('Cache-Control', 'no-store')
     res.status(200).json({
       score: Number(data.score || 0),
