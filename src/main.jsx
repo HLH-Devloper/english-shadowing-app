@@ -20,7 +20,8 @@ root.render(
 )
 
 // 注册 Service Worker（PWA 支持）
-if ('serviceWorker' in navigator) {
+// 仅在生产环境注册 Service Worker，避免开发环境拦截热更新与路由，导致页面无法显示
+if (import.meta && import.meta.env && import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
