@@ -83,7 +83,55 @@ export default async function handler(req, res) {
       } catch (_) {}
     }
     if (!parsed) {
-      res.status(200).json({ score: 0, rubric: { fluency: 0, accuracy: 0, vocabulary: 0, grammar: 0 }, summary: '评估服务暂不可用', correction: '', suggestions: [] })
+      const txt = String(userText || '').trim()
+      const ref = String(original || '').trim()
+      const zh = String(translation || '').trim()
+      const toWords = (s) => s.toLowerCase().replace(/[^a-z\s']/g, ' ').split(/\s+/).filter(Boolean)
+      const sRef = toWords(ref).join(' ')
+      const sTxt = toWords(txt).join(' ')
+      const ed = (() => {
+        const a = sRef
+        const b = sTxt
+        const m = a.length
+        const n = b.length
+        const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0))
+        for (let i = 0; i <= m; i++) dp[i][0] = i
+        for (let j = 0; j <= n; j++) dp[0][j] = j
+        for (let i = 1; i <= m; i++) {
+          for (let j = 1; j <= n; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1
+            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+          }
+        }
+        return dp[m][n]
+      })()
+      const maxLen = Math.max(sRef.length, sTxt.length) || 1
+      const accuracy = Math.max(0, Math.min(100, Math.round((1 - ed / maxLen) * 100)))
+      const words = sTxt ? sTxt.split(' ').filter(Boolean).length : 0
+      const fluency = Math.max(0, Math.min(100, Math.round(Math.min(1, words / Math.max(1, sRef.split(' ').length)) * 100)))
+      const vocab = Math.max(0, Math.min(100, Math.round(Math.min(1, (new Set(sTxt.split(' ')).size) / Math.max(1, new Set(sRef.split(' ')).size)) * 100)))
+      const grammar = Math.max(0, Math.min(100, Math.round(100 - Math.max(0, 2 - words) * 20)))
+      const overview = zh ? `请用英文表达并保持与参考句的语气一致。当前表达偏简略，建议补充关键信息：${zh}` : '请用英文完整表达含义，并尽量贴近参考句的语气和信息点。'
+      const basicText = txt ? `${txt}` : ref
+      const dailyText = ref ? `${ref}` : 'Use a natural everyday tone.'
+      const workText = ref ? `It ${ref.replace(/^([A-Za-z]+\s)/, '').toLowerCase()}` : 'Use a polite and formal register.'
+      const practice = [
+        zh ? `请用英文写一句话，表达：${zh}` : '请用英文写一句话，完整表达参考句的含义。',
+        '再写一句，用比较委婉的方式表达相同含义。'
+      ]
+      res.setHeader('Cache-Control', 'no-store')
+      res.status(200).json({
+        score: Math.round((accuracy / 100) * 5 * 10) / 10,
+        rubric: { fluency, accuracy, vocabulary: vocab, grammar },
+        overview,
+        upgrades: {
+          basic: { text: basicText, explain: '在保留你表达的基础上补充或增强信息点。' },
+          daily: { text: dailyText, explain: '使用更自然的日常口语，贴近参考句语气。' },
+          work: { text: workText, explain: '使用更委婉、正式的表达，适合职场语域。' }
+        },
+        practice,
+        preferenceEcho: String(preference || 'daily')
+      })
       return
     }
   }
