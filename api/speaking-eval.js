@@ -56,8 +56,36 @@ export default async function handler(req, res) {
     }
   }
   if (!parsed) {
-    res.status(200).json({ score: 0, rubric: { fluency: 0, accuracy: 0, vocabulary: 0, grammar: 0 }, summary: '评估服务暂不可用', correction: '', suggestions: [] })
-    return
+    // 回退：使用更简单的输出结构提示词，提升可用性
+    for (const name of models) {
+      try {
+        const model = genai.getGenerativeModel({ model: name, generationConfig: { responseMimeType: 'application/json' } })
+        const pref = String(preference || 'daily').toLowerCase() === 'work' ? 'work' : 'daily'
+        const prompt2 = [
+          'You are an English speaking coach. Evaluate the user\'s paraphrase. Return STRICT JSON ONLY with keys:',
+          'score(number 0-5), rubric(object: fluency, accuracy, vocabulary, grammar), summary(string, zh), correction(string, en), suggestions(array of string, en), preferenceEcho(string in [daily, work]).',
+          `Reference (English): ${String(original || '').trim()}`,
+          `Reference (Chinese): ${String(translation || '').trim()}`,
+          `User paraphrase: ${String(userText || '').trim()}`,
+          `Preference: ${pref}`
+        ].join('\n')
+        const result2 = await model.generateContent(prompt2)
+        let text2 = String(result2?.response?.text?.() || '').trim()
+        if (!text2) continue
+        if (text2.startsWith('```')) { text2 = text2.replace(/```json|```/g, '').trim() }
+        try {
+          parsed = JSON.parse(text2)
+        } catch (e) {
+          const m2 = text2.match(/\{[\s\S]*\}/)
+          if (m2) { parsed = JSON.parse(m2[0]) }
+        }
+        if (parsed) break
+      } catch (_) {}
+    }
+    if (!parsed) {
+      res.status(200).json({ score: 0, rubric: { fluency: 0, accuracy: 0, vocabulary: 0, grammar: 0 }, summary: '评估服务暂不可用', correction: '', suggestions: [] })
+      return
+    }
   }
     const data = parsed
     res.setHeader('Cache-Control', 'no-store')
