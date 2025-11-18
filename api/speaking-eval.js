@@ -42,6 +42,7 @@ export default async function handler(req, res) {
       res.status(200).json({ score: 0, rubric: { fluency: 0, accuracy: 0, vocabulary: 0, grammar: 0 }, summary: '暂时无法解析评估结果', correction: '', suggestions: [] })
       return
     }
+    res.setHeader('Cache-Control', 'no-store')
     res.status(200).json({
       score: Number(data.score || 0),
       rubric: {
@@ -57,6 +58,7 @@ export default async function handler(req, res) {
       sentenceId: String(sentenceId || '')
     })
   } catch (e) {
+    res.setHeader('Cache-Control', 'no-store')
     res.status(200).json({ score: 0, rubric: { fluency: 0, accuracy: 0, vocabulary: 0, grammar: 0 }, summary: '评估服务暂不可用', correction: '', suggestions: [] })
   }
 }
