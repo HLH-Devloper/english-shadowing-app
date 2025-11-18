@@ -1,11 +1,48 @@
-// Vercel Serverless Function: YouTube Captions 抓取（仅使用公开 timedtext 接口，不尝试 Innertube）
+// Vercel Serverless Function: YouTube Captions 抓取（优先使用公开 timedtext 接口；同时利用 watch 页面解析到的 captionTracks.baseUrl 增强命中率，不尝试 Innertube）
 // 入参：videoId、lang
 // 返回：{ segments: [], meta: { lang, tracks, source: 'timedtext' } }
+
+// 轻量工具函数：抓取 watch 页面 HTML(HyperText Markup Language) 并解析 captionTracks
+async function fetchHtml(url) {
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.youtube.com/',
+      'Cookie': 'CONSENT=YES+'
+    }
+  })
+  if (!res.ok) throw new Error(`watch fetch failed: ${res.status} ${res.statusText}`)
+  return await res.text()
+}
+
+function extractJson(html, markerStart, markerEnd) {
+  const sIdx = html.indexOf(markerStart)
+  if (sIdx < 0) return null
+  const start = sIdx + markerStart.length
+  const eIdx = html.indexOf(markerEnd, start)
+  if (eIdx < 0) return null
+  const raw = html.slice(start, eIdx)
+  try { return JSON.parse(raw) } catch { return null }
+}
+
+function parseCaptionTracks(ytInitialPlayerResponse) {
+  const list = ytInitialPlayerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks || []
+  return list.map(t => ({
+    lang_code: t?.languageCode,
+    name: t?.name?.simpleText || t?.name?.runs?.map(r => r.text).join('') || '',
+    kind: t?.kind,
+    baseUrl: t?.baseUrl,
+  }))
+}
 
 async function fetchTimedText(url) {
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.youtube.com/',
+      'Cookie': 'CONSENT=YES+'
     }
   })
   if (!res.ok) {
@@ -126,10 +163,25 @@ export default async function handler(req, res) {
     const dbg = enableDebug ? { tried: [], notes: [] } : null
     if (!vid) { res.status(400).json({ error: 'BadRequest', message: '缺少 videoId 参数' }); return }
 
+    // 解析 watch 页面，以获取可能的 captionTracks.baseUrl（用于增强命中）
+    let playerTracks = []
+    try {
+      const html = await fetchHtml(`https://www.youtube.com/watch?v=${encodeURIComponent(vid)}`)
+      const ytInitialPlayerResponse = extractJson(html, 'var ytInitialPlayerResponse = ', ';') || extractJson(html, 'window["ytInitialPlayerResponse"] = ', ';') || null
+      playerTracks = parseCaptionTracks(ytInitialPlayerResponse)
+      if (dbg && playerTracks && playerTracks.length) dbg.notes.push(`Found ${playerTracks.length} captionTracks from watch page`)
+    } catch {}
+
     const listUrl = `https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(vid)}`
     const listXml = await fetchTimedText(listUrl)
     if (dbg) dbg.tried.push(listUrl)
     const allTracks = parseTrackListXml(listXml)
+    // 合并 watch 页面解析出的 captionTracks（包含 baseUrl）
+    if (playerTracks && playerTracks.length) {
+      for (const t of playerTracks) {
+        allTracks.push({ id: undefined, lang_code: t.lang_code, lang_original: undefined, name: t.name, kind: t.kind, baseUrl: t.baseUrl })
+      }
+    }
     // 尝试 caps=asr 以便列出自动语音识别轨道
     if ((!allTracks || allTracks.length === 0)) {
       const listAsrUrl = `https://www.youtube.com/api/timedtext?type=list&caps=asr&v=${encodeURIComponent(vid)}`
@@ -151,6 +203,45 @@ export default async function handler(req, res) {
     const baseQuery = params.join('&')
 
     let segments = []
+    // 若存在 baseUrl，优先直接使用 baseUrl 进行请求
+    if (picked?.baseUrl) {
+      const base = picked.baseUrl
+      const amp = base.includes('?') ? '&' : '?'
+      try {
+        const srv3BaseUrl = `${base}${amp}fmt=srv3&client=yt`
+        if (dbg) dbg.tried.push(srv3BaseUrl)
+        const srv3Text = await fetchTimedText(srv3BaseUrl)
+        const srv3 = tryParseJson(srv3Text)
+        if (srv3 && Array.isArray(srv3.events)) segments = parseSrv3(srv3)
+      } catch {}
+      if (!segments || segments.length === 0) {
+        try {
+          const json3BaseUrl = `${base}${amp}fmt=json3&client=yt`
+          if (dbg) dbg.tried.push(json3BaseUrl)
+          const json3Text = await fetchTimedText(json3BaseUrl)
+          const json3 = tryParseJson(json3Text)
+          if (json3 && Array.isArray(json3.events)) segments = parseSrv3(json3)
+        } catch {}
+      }
+      if (!segments || segments.length === 0) {
+        try {
+          const vttBaseUrl = `${base}${amp}fmt=vtt&client=yt`
+          if (dbg) dbg.tried.push(vttBaseUrl)
+          const vttText = await fetchTimedText(vttBaseUrl)
+          const vttSegs = parseVtt(vttText)
+          if (vttSegs && vttSegs.length) segments = vttSegs
+        } catch {}
+      }
+      if (!segments || segments.length === 0) {
+        try {
+          const xmlBaseUrl = `${base}${amp}client=yt`
+          if (dbg) dbg.tried.push(xmlBaseUrl)
+          const xmlText = await fetchTimedText(xmlBaseUrl)
+          const xmlSegs = parseXmlCaptions(xmlText)
+          if (xmlSegs && xmlSegs.length) segments = xmlSegs
+        } catch {}
+      }
+    }
     try {
       const srv3Url = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=srv3`
       if (dbg) dbg.tried.push(srv3Url)
