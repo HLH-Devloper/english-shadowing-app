@@ -62,11 +62,11 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
                   {Array.isArray(m.practice) && m.practice.length > 0 && (
                     <div style={{ padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', marginTop: '10px' }}>
                       <div style={{ fontWeight: 600, marginBottom: '6px' }}>你的练习题</div>
-                      <div style={{ display: 'grid', gap: '6px' }}>
+                      <ol style={{ paddingLeft: '18px', margin: 0, display: 'grid', gap: '6px' }}>
                         {m.practice.slice(0, 2).map((t, i) => (
-                          <button key={i} onClick={() => setInputText(String(t))} className="secondary-btn" style={{ textAlign: 'left' }}>{t}</button>
+                          <li key={i} style={{ whiteSpace: 'pre-wrap' }}>{t}</li>
                         ))}
-                      </div>
+                      </ol>
                     </div>
                   )}
                 </div>

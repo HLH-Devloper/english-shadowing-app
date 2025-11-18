@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         `Reference (Chinese): ${String(translation || '').trim()}`,
         `User paraphrase: ${String(userText || '').trim()}`,
         `Preference: ${pref} (daily = casual everyday speech with natural emotion; work = polite, formal, and euphemistic register suitable for workplace or formal sharing).`,
-        'Output strictly in JSON with keys: score(number), rubric(object: fluency, accuracy, vocabulary, grammar), overview(string, zh), upgrades(object: { basic: { text:string, explain:string }, daily: { text:string, explain:string }, work: { text:string, explain:string } }), practice(array of string, en), preferenceEcho(string in [daily, work]). Do NOT include additional text outside JSON.'
+        'Output strictly in JSON with keys: score(number), rubric(object: fluency, accuracy, vocabulary, grammar), overview(string, zh), upgrades(object: { basic: { text:string, explain:string }, daily: { text:string, explain:string }, work: { text:string, explain:string } }), practice(array of string, zh instructions describing what to write in English), preferenceEcho(string in [daily, work]). Do NOT include additional text outside JSON.'
       ].join('\n')
       const result = await model.generateContent(prompt)
       let text = String(result?.response?.text?.() || '').trim()
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
         const pref = String(preference || 'daily').toLowerCase() === 'work' ? 'work' : 'daily'
         const prompt2 = [
           'You are an English speaking coach. Evaluate the user\'s paraphrase. Return STRICT JSON ONLY with keys:',
-          'score(number 0-5), rubric(object: fluency, accuracy, vocabulary, grammar), summary(string, zh), correction(string, en), suggestions(array of string, en), preferenceEcho(string in [daily, work]).',
+          'score(number 0-5), rubric(object: fluency, accuracy, vocabulary, grammar), summary(string, zh), correction(string, en), suggestions(array of string, en), practice(array of string, zh instructions), preferenceEcho(string in [daily, work]).',
           `Reference (English): ${String(original || '').trim()}`,
           `Reference (Chinese): ${String(translation || '').trim()}`,
           `User paraphrase: ${String(userText || '').trim()}`,
