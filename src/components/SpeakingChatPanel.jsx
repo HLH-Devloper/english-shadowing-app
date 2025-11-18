@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import '../speaking-modern.css'
 
 export default function SpeakingChatPanel({ sentence, getMessages, onSend, onClear, loadMessages }) {
   const [inputText, setInputText] = useState('')
@@ -28,19 +29,29 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
   }
   return (
     <div className="speaking-chat-root">
+      {/* 当前句子卡片 */}
+      {sentence?.id && (
+        <div className="chat-sentence-card">
+          <div className="sentence-original">{sentence.original || sentence.text || ''}</div>
+          {sentence.translation && (
+            <div className="sentence-translation">{sentence.translation}</div>
+          )}
+        </div>
+      )}
+
       <div className="chat-body">
         {messages.map((m, idx) => (
           <div key={idx} className={`chat-bubble ${m.role === 'user' ? 'bubble-user' : m.role === 'assistant' ? 'bubble-assistant' : 'bubble-system'}`}>
             {m.role === 'assistant' && typeof m.score === 'number' && (
-              <div className="score-badge">评分 {m.score.toFixed(1)}</div>
+              <div className="score-badge">{m.score.toFixed(1)}</div>
             )}
             <div className="bubble-content">
               {m.role === 'assistant' && m.upgrades ? (
                 <div>
                   {m.overview && (
-                    <div style={{ padding: '8px 10px', borderRadius: '10px', background: 'var(--muted, rgba(255,255,255,0.08))', marginBottom: '10px' }}>
-                      <div style={{ fontWeight: 600, marginBottom: '6px' }}>整体评价</div>
-                      <div>{m.overview}</div>
+                    <div className="overview-card">
+                      <div className="overview-card-title">整体评价</div>
+                      <div className="overview-card-content">{m.overview}</div>
                     </div>
                   )}
                   {(() => {
@@ -51,20 +62,22 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
                       if (!item || !item.text) return null
                       const title = k === 'basic' ? '基础版' : (k === 'daily' ? '日常版' : '礼貌职场版')
                       return (
-                        <div key={k} style={{ padding: '10px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', marginBottom: '10px' }}>
-                          <div style={{ fontWeight: 600, marginBottom: '6px' }}>表达升级（{title}）</div>
-                          <div style={{ whiteSpace: 'pre-wrap' }}>{item.text}</div>
-                          {item.explain && (<div style={{ marginTop: '6px', opacity: 0.9 }}>解释：{item.explain}</div>)}
+                        <div key={k} className={`upgrade-card ${k}`}>
+                          <div className="upgrade-card-title">表达升级（{title}）</div>
+                          <div className="upgrade-card-text">{item.text}</div>
+                          {item.explain && (
+                            <div className="upgrade-card-explain">解释：{item.explain}</div>
+                          )}
                         </div>
                       )
                     })
                   })()}
                   {Array.isArray(m.practice) && m.practice.length > 0 && (
-                    <div style={{ padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', marginTop: '10px' }}>
-                      <div style={{ fontWeight: 600, marginBottom: '6px' }}>你的练习题</div>
-                      <ol style={{ paddingLeft: '18px', margin: 0, display: 'grid', gap: '6px' }}>
+                    <div className="practice-card">
+                      <div className="practice-card-title">你的练习题</div>
+                      <ol className="practice-list">
                         {m.practice.slice(0, 2).map((t, i) => (
-                          <li key={i} style={{ whiteSpace: 'pre-wrap' }}>{t}</li>
+                          <li key={i}>{t}</li>
                         ))}
                       </ol>
                     </div>
@@ -76,34 +89,78 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
             </div>
             {m.role === 'assistant' && m.rubric && (
               <div className="rubric-row">
-                <span>流利度 {Number(m.rubric.fluency || 0).toFixed(1)}</span>
-                <span>准确度 {Number(m.rubric.accuracy || 0).toFixed(1)}</span>
-                <span>词汇 {Number(m.rubric.vocabulary || 0).toFixed(1)}</span>
-                <span>语法 {Number(m.rubric.grammar || 0).toFixed(1)}</span>
+                <div className="rubric-item">
+                  <span className="icon">🎯</span>
+                  <span className="label">流利度</span>
+                  <span className="score">{Number(m.rubric.fluency || 0).toFixed(1)}</span>
+                </div>
+                <div className="rubric-item">
+                  <span className="icon">✅</span>
+                  <span className="label">准确度</span>
+                  <span className="score">{Number(m.rubric.accuracy || 0).toFixed(1)}</span>
+                </div>
+                <div className="rubric-item">
+                  <span className="icon">📚</span>
+                  <span className="label">词汇</span>
+                  <span className="score">{Number(m.rubric.vocabulary || 0).toFixed(1)}</span>
+                </div>
+                <div className="rubric-item">
+                  <span className="icon">📝</span>
+                  <span className="label">语法</span>
+                  <span className="score">{Number(m.rubric.grammar || 0).toFixed(1)}</span>
+                </div>
               </div>
             )}
           </div>
         ))}
+        {sending && (
+          <div className="loading-indicator">
+            <div className="loading-dot"></div>
+            <div className="loading-dot"></div>
+            <div className="loading-dot"></div>
+          </div>
+        )}
         <div ref={msgEndRef} />
       </div>
       <div className="chat-input-bar">
-        <div className="chat-preference" style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-          <button className={`pref-btn ${preference === 'daily' ? 'active' : ''}`} onClick={() => setPreference('daily')} style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--muted)', background: preference === 'daily' ? 'rgba(34,197,94,0.25)' : 'transparent' }}>日常</button>
-          <button className={`pref-btn ${preference === 'work' ? 'active' : ''}`} onClick={() => setPreference('work')} style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--muted)', background: preference === 'work' ? 'rgba(59,130,246,0.25)' : 'transparent' }}>职场</button>
+        <div className="chat-preference">
+          <button
+            className={`pref-btn daily ${preference === 'daily' ? 'active' : ''}`}
+            onClick={() => setPreference('daily')}
+          >
+            日常
+          </button>
+          <button
+            className={`pref-btn work ${preference === 'work' ? 'active' : ''}`}
+            onClick={() => setPreference('work')}
+          >
+            职场
+          </button>
         </div>
-        <div className="chat-input-row" style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+        <div className="chat-input-row">
           <textarea
             className="chat-input"
             placeholder="用英文表达你的意思…"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            style={{ flex: 1 }}
           />
-          <button className="primary-btn" disabled={!sentence?.id || sending} onClick={handleSend} style={{ height: '36px' }}>{sending ? '发送中…' : '发送'}</button>
+          <button
+            className="send-btn"
+            disabled={!sentence?.id || sending}
+            onClick={handleSend}
+          >
+            {sending ? '发送中' : '发送'}
+          </button>
         </div>
-        <div className="chat-clear-row" style={{ marginTop: '8px' }}>
-          <button className="secondary-btn" disabled={!sentence?.id} onClick={() => onClear?.(sentence?.id)}>清空本句</button>
+        <div className="chat-clear-row">
+          <button
+            className="clear-btn"
+            disabled={!sentence?.id}
+            onClick={() => onClear?.(sentence?.id)}
+          >
+            清空本句
+          </button>
         </div>
       </div>
     </div>
