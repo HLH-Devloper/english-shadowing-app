@@ -10,20 +10,7 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
   const msgEndRef = useRef(null)
   const messages = useMemo(() => {
     if (!sentence?.id) return [{ role: 'system', content: '请在字幕列表中选择一句话' }]
-    const allMessages = getMessages(sentence.id)
-    // 过滤掉显示当前句子的系统消息（因为顶部已经有句子卡片了）
-    return allMessages.filter(m => {
-      // 如果是系统消息且包含当前句子的英文或中文，则过滤掉
-      if (m.role === 'system') {
-        const content = String(m.content || '').trim()
-        const original = String(sentence.original || sentence.text || '').trim()
-        const translation = String(sentence.translation || '').trim()
-        // 如果系统消息包含当前句子的完整文本，则认为是重复的句子展示
-        if (original && content.includes(original)) return false
-        if (translation && content.includes(translation)) return false
-      }
-      return true
-    })
+    return getMessages(sentence.id)
   }, [sentence, getMessages])
   useEffect(() => { if (sentence?.id) loadMessages?.(sentence.id) }, [sentence?.id])
   useEffect(() => { if (msgEndRef.current) msgEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [messages?.length])
