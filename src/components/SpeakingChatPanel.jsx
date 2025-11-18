@@ -14,7 +14,8 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
     const text = String(inputText || '').trim()
     if (!text || !sentence?.id || sending) return
     setSending(true)
-    try { await onSend?.(sentence.id, text) } finally { setSending(false); setInputText('') }
+    setInputText('')
+    try { await onSend?.(sentence.id, text) } finally { setSending(false) }
   }
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
