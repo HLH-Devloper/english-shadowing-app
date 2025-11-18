@@ -243,6 +243,18 @@ async function getTranscriptStandalone({ videoId, lang, enableDebug = false }) {
     const listXml = await fetchTimedText(listUrl)
     if (debug) debug.tried.push(listUrl)
     const allTracks = parseTrackListXml(listXml)
+    // 额外尝试：某些视频只有自动字幕轨道，需要 caps=asr 才能在列表中显示
+    if ((!allTracks || allTracks.length === 0)) {
+      const listAsrUrl = `https://www.youtube.com/api/timedtext?type=list&caps=asr&v=${encodeURIComponent(videoId)}`
+      try {
+        const listAsrXml = await fetchTimedText(listAsrUrl)
+        if (debug) debug.tried.push(listAsrUrl)
+        const tracksAsr = parseTrackListXml(listAsrXml)
+        if (tracksAsr && tracksAsr.length) {
+          allTracks.push(...tracksAsr)
+        }
+      } catch {}
+    }
     const picked = pickTrackAdvanced(allTracks, lang)
 
     const langCode = picked?.lang_code || lang || 'en'
@@ -253,6 +265,8 @@ async function getTranscriptStandalone({ videoId, lang, enableDebug = false }) {
     if (picked?.kind) params.push(`kind=${encodeURIComponent(picked.kind)}`)
     // 语言提示（非必需）：部分场景提高命中概率
     params.push(`hl=${encodeURIComponent(langCode)}`)
+    // 客户端提示：在某些情况下可提升访问成功率
+    params.push(`client=yt`)
     const baseQuery = params.join('&')
 
     // try srv3
@@ -263,6 +277,14 @@ async function getTranscriptStandalone({ videoId, lang, enableDebug = false }) {
       const srv3 = tryParseJson(srv3Text)
       if (srv3 && Array.isArray(srv3.events)) {
         segments = parseSrv3(srv3)
+      }
+      // 兼容部分服务返回 json3 别名
+      if ((!segments || segments.length === 0)) {
+        const json3Url = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=json3`
+        if (debug) debug.tried.push(json3Url)
+        const json3Text = await fetchTimedText(json3Url)
+        const json3 = tryParseJson(json3Text)
+        if (json3 && Array.isArray(json3.events)) segments = parseSrv3(json3)
       }
     } catch {}
 
@@ -285,6 +307,37 @@ async function getTranscriptStandalone({ videoId, lang, enableDebug = false }) {
         const xmlText = await fetchTimedText(xmlUrl)
         segments = parseXmlCaptions(xmlText)
       } catch {}
+    }
+
+    // 如果列表为空或未选择到轨道，额外尝试自动语音识别 asr 轨道（不依赖列表）
+    if ((!segments || segments.length === 0)) {
+      const asrParams = [`lang=${encodeURIComponent(langCode)}`, `v=${encodeURIComponent(videoId)}`, 'kind=asr', `hl=${encodeURIComponent(langCode)}`, 'client=yt']
+      const asrQuery = asrParams.join('&')
+      try {
+        const srv3AsrUrl = `https://www.youtube.com/api/timedtext?${asrQuery}&fmt=srv3`
+        if (debug) debug.tried.push(srv3AsrUrl)
+        const srv3AsrText = await fetchTimedText(srv3AsrUrl)
+        const srv3Asr = tryParseJson(srv3AsrText)
+        if (srv3Asr && Array.isArray(srv3Asr.events)) segments = parseSrv3(srv3Asr)
+      } catch {}
+      if (!segments || segments.length === 0) {
+        try {
+          const vttAsrUrl = `https://www.youtube.com/api/timedtext?${asrQuery}&fmt=vtt`
+          if (debug) debug.tried.push(vttAsrUrl)
+          const vttAsrText = await fetchTimedText(vttAsrUrl)
+          const vttSegs = parseVtt(vttAsrText)
+          if (vttSegs && vttSegs.length) segments = vttSegs
+        } catch {}
+      }
+      if (!segments || segments.length === 0) {
+        try {
+          const xmlAsrUrl = `https://www.youtube.com/api/timedtext?${asrQuery}`
+          if (debug) debug.tried.push(xmlAsrUrl)
+          const xmlAsrText = await fetchTimedText(xmlAsrUrl)
+          const xmlSegs = parseXmlCaptions(xmlAsrText)
+          if (xmlSegs && xmlSegs.length) segments = xmlSegs
+        } catch {}
+      }
     }
 
     const meta = { lang: langCode, tracks: allTracks, source }

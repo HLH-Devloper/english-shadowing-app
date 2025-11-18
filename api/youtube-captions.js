@@ -130,6 +130,16 @@ export default async function handler(req, res) {
     const listXml = await fetchTimedText(listUrl)
     if (dbg) dbg.tried.push(listUrl)
     const allTracks = parseTrackListXml(listXml)
+    // 尝试 caps=asr 以便列出自动语音识别轨道
+    if ((!allTracks || allTracks.length === 0)) {
+      const listAsrUrl = `https://www.youtube.com/api/timedtext?type=list&caps=asr&v=${encodeURIComponent(vid)}`
+      try {
+        const listAsrXml = await fetchTimedText(listAsrUrl)
+        if (dbg) dbg.tried.push(listAsrUrl)
+        const tracksAsr = parseTrackListXml(listAsrXml)
+        if (tracksAsr && tracksAsr.length) allTracks.push(...tracksAsr)
+      } catch {}
+    }
     const picked = pickTrackAdvanced(allTracks, desired)
     const langCode = picked?.lang_code || desired || 'en'
     const params = [`lang=${encodeURIComponent(langCode)}`, `v=${encodeURIComponent(vid)}`]
@@ -137,6 +147,7 @@ export default async function handler(req, res) {
     if (picked?.name) params.push(`name=${encodeURIComponent(picked.name)}`)
     if (picked?.kind) params.push(`kind=${encodeURIComponent(picked.kind)}`)
     params.push(`hl=${encodeURIComponent(langCode)}`)
+    params.push('client=yt')
     const baseQuery = params.join('&')
 
     let segments = []
@@ -146,6 +157,13 @@ export default async function handler(req, res) {
       const srv3Text = await fetchTimedText(srv3Url)
       const srv3 = tryParseJson(srv3Text)
       if (srv3 && Array.isArray(srv3.events)) segments = parseSrv3(srv3)
+      if ((!segments || segments.length === 0)) {
+        const json3Url = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=json3`
+        if (dbg) dbg.tried.push(json3Url)
+        const json3Text = await fetchTimedText(json3Url)
+        const json3 = tryParseJson(json3Text)
+        if (json3 && Array.isArray(json3.events)) segments = parseSrv3(json3)
+      }
     } catch {}
 
     if (!segments || segments.length === 0) {
@@ -165,6 +183,37 @@ export default async function handler(req, res) {
         const xmlText = await fetchTimedText(xmlUrl)
         segments = parseXmlCaptions(xmlText)
       } catch {}
+    }
+
+    // 若列表为空或未选择到轨道，直接尝试自动语音识别 asr 轨道
+    if (!segments || segments.length === 0) {
+      const asrParams = [`lang=${encodeURIComponent(langCode)}`, `v=${encodeURIComponent(vid)}`, 'kind=asr', `hl=${encodeURIComponent(langCode)}`, 'client=yt']
+      const asrQuery = asrParams.join('&')
+      try {
+        const srv3AsrUrl = `https://www.youtube.com/api/timedtext?${asrQuery}&fmt=srv3`
+        if (dbg) dbg.tried.push(srv3AsrUrl)
+        const srv3AsrText = await fetchTimedText(srv3AsrUrl)
+        const srv3Asr = tryParseJson(srv3AsrText)
+        if (srv3Asr && Array.isArray(srv3Asr.events)) segments = parseSrv3(srv3Asr)
+      } catch {}
+      if (!segments || segments.length === 0) {
+        try {
+          const vttAsrUrl = `https://www.youtube.com/api/timedtext?${asrQuery}&fmt=vtt`
+          if (dbg) dbg.tried.push(vttAsrUrl)
+          const vttAsrText = await fetchTimedText(vttAsrUrl)
+          const vttSegs = parseVtt(vttAsrText)
+          if (vttSegs && vttSegs.length) segments = vttSegs
+        } catch {}
+      }
+      if (!segments || segments.length === 0) {
+        try {
+          const xmlAsrUrl = `https://www.youtube.com/api/timedtext?${asrQuery}`
+          if (dbg) dbg.tried.push(xmlAsrUrl)
+          const xmlAsrText = await fetchTimedText(xmlAsrUrl)
+          const xmlSegs = parseXmlCaptions(xmlAsrText)
+          if (xmlSegs && xmlSegs.length) segments = xmlSegs
+        } catch {}
+      }
     }
 
     const meta = { lang: langCode, tracks: allTracks, source: 'timedtext' }
