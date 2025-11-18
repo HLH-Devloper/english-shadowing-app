@@ -212,7 +212,7 @@ function vttTimeToSeconds(s) {
   return h * 3600 + m * 60 + sec
 }
 
-async function getTranscriptStandalone({ videoId, lang }) {
+async function getTranscriptStandalone({ videoId, lang, enableDebug = false }) {
   const html = await fetchHtml(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`)
   const ytcfg = getYtcfg(html) || {}
   const apiKey = ytcfg?.INNERTUBE_API_KEY || ''
@@ -236,21 +236,30 @@ async function getTranscriptStandalone({ videoId, lang }) {
     source = 'timedtext'
   }
 
+  const debug = enableDebug ? { tried: [], notes: [] } : null
   if (!Array.isArray(segments) || segments.length === 0) {
     // fallback to timedtext
-    const listXml = await fetchTimedText(`https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(videoId)}`)
+    const listUrl = `https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(videoId)}`
+    const listXml = await fetchTimedText(listUrl)
+    if (debug) debug.tried.push(listUrl)
     const allTracks = parseTrackListXml(listXml)
     const picked = pickTrackAdvanced(allTracks, lang)
 
     const langCode = picked?.lang_code || lang || 'en'
     const params = [`lang=${encodeURIComponent(langCode)}`, `v=${encodeURIComponent(videoId)}`]
+    // 若存在轨道标识 id，优先使用 id 进行请求，兼容部分视频需要明确 track id 的情况
+    if (picked?.id) params.push(`id=${encodeURIComponent(picked.id)}`)
     if (picked?.name) params.push(`name=${encodeURIComponent(picked.name)}`)
     if (picked?.kind) params.push(`kind=${encodeURIComponent(picked.kind)}`)
+    // 语言提示（非必需）：部分场景提高命中概率
+    params.push(`hl=${encodeURIComponent(langCode)}`)
     const baseQuery = params.join('&')
 
     // try srv3
     try {
-      const srv3Text = await fetchTimedText(`https://www.youtube.com/api/timedtext?${baseQuery}&fmt=srv3`)
+      const srv3Url = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=srv3`
+      if (debug) debug.tried.push(srv3Url)
+      const srv3Text = await fetchTimedText(srv3Url)
       const srv3 = tryParseJson(srv3Text)
       if (srv3 && Array.isArray(srv3.events)) {
         segments = parseSrv3(srv3)
@@ -260,7 +269,9 @@ async function getTranscriptStandalone({ videoId, lang }) {
     // try vtt
     if (!segments || segments.length === 0) {
       try {
-        const vttText = await fetchTimedText(`https://www.youtube.com/api/timedtext?${baseQuery}&fmt=vtt`)
+        const vttUrl = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=vtt`
+        if (debug) debug.tried.push(vttUrl)
+        const vttText = await fetchTimedText(vttUrl)
         const vttSegs = parseVtt(vttText)
         if (vttSegs && vttSegs.length) segments = vttSegs
       } catch {}
@@ -269,27 +280,34 @@ async function getTranscriptStandalone({ videoId, lang }) {
     // try xml
     if (!segments || segments.length === 0) {
       try {
-        const xmlText = await fetchTimedText(`https://www.youtube.com/api/timedtext?${baseQuery}`)
+        const xmlUrl = `https://www.youtube.com/api/timedtext?${baseQuery}`
+        if (debug) debug.tried.push(xmlUrl)
+        const xmlText = await fetchTimedText(xmlUrl)
         segments = parseXmlCaptions(xmlText)
       } catch {}
     }
 
-    return { segments, meta: { lang: langCode, tracks: allTracks, source } }
+    const meta = { lang: langCode, tracks: allTracks, source }
+    if (debug) meta.debug = debug
+    return { segments, meta }
   }
 
-  return { segments, meta: { lang: lang || 'en', tracks, source } }
+  const meta = { lang: lang || 'en', tracks, source }
+  if (debug) meta.debug = debug
+  return { segments, meta }
 }
 
 export default async function handler(req, res) {
   try {
-    const { videoId, lang } = req.query || {}
+    const { videoId, lang, debug } = req.query || {}
     const vid = String(videoId || '').trim()
     const l = String(lang || 'en').trim()
     if (!vid) {
       res.status(400).json({ error: 'BadRequest', message: '缺少 videoId 参数' })
       return
     }
-    const result = await getTranscriptStandalone({ videoId: vid, lang: l })
+    const enableDebug = String(debug || '').toLowerCase() === '1'
+    const result = await getTranscriptStandalone({ videoId: vid, lang: l, enableDebug })
     // 预览环境不缓存；生产可适度缓存
     try {
       const env = String(process.env.VERCEL_ENV || '').toLowerCase()

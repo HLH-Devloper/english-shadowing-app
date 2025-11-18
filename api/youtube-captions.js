@@ -119,30 +119,40 @@ function vttTimeToSeconds(s) {
 
 export default async function handler(req, res) {
   try {
-    const { videoId, lang } = req.query || {}
+    const { videoId, lang, debug } = req.query || {}
     const vid = String(videoId || '').trim()
     const desired = String(lang || 'en').trim()
+    const enableDebug = String(debug || '').toLowerCase() === '1'
+    const dbg = enableDebug ? { tried: [], notes: [] } : null
     if (!vid) { res.status(400).json({ error: 'BadRequest', message: '缺少 videoId 参数' }); return }
 
-    const listXml = await fetchTimedText(`https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(vid)}`)
+    const listUrl = `https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(vid)}`
+    const listXml = await fetchTimedText(listUrl)
+    if (dbg) dbg.tried.push(listUrl)
     const allTracks = parseTrackListXml(listXml)
     const picked = pickTrackAdvanced(allTracks, desired)
     const langCode = picked?.lang_code || desired || 'en'
     const params = [`lang=${encodeURIComponent(langCode)}`, `v=${encodeURIComponent(vid)}`]
+    if (picked?.id) params.push(`id=${encodeURIComponent(picked.id)}`)
     if (picked?.name) params.push(`name=${encodeURIComponent(picked.name)}`)
     if (picked?.kind) params.push(`kind=${encodeURIComponent(picked.kind)}`)
+    params.push(`hl=${encodeURIComponent(langCode)}`)
     const baseQuery = params.join('&')
 
     let segments = []
     try {
-      const srv3Text = await fetchTimedText(`https://www.youtube.com/api/timedtext?${baseQuery}&fmt=srv3`)
+      const srv3Url = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=srv3`
+      if (dbg) dbg.tried.push(srv3Url)
+      const srv3Text = await fetchTimedText(srv3Url)
       const srv3 = tryParseJson(srv3Text)
       if (srv3 && Array.isArray(srv3.events)) segments = parseSrv3(srv3)
     } catch {}
 
     if (!segments || segments.length === 0) {
       try {
-        const vttText = await fetchTimedText(`https://www.youtube.com/api/timedtext?${baseQuery}&fmt=vtt`)
+        const vttUrl = `https://www.youtube.com/api/timedtext?${baseQuery}&fmt=vtt`
+        if (dbg) dbg.tried.push(vttUrl)
+        const vttText = await fetchTimedText(vttUrl)
         const vttSegs = parseVtt(vttText)
         if (vttSegs && vttSegs.length) segments = vttSegs
       } catch {}
@@ -150,12 +160,16 @@ export default async function handler(req, res) {
 
     if (!segments || segments.length === 0) {
       try {
-        const xmlText = await fetchTimedText(`https://www.youtube.com/api/timedtext?${baseQuery}`)
+        const xmlUrl = `https://www.youtube.com/api/timedtext?${baseQuery}`
+        if (dbg) dbg.tried.push(xmlUrl)
+        const xmlText = await fetchTimedText(xmlUrl)
         segments = parseXmlCaptions(xmlText)
       } catch {}
     }
 
-    const result = { segments, meta: { lang: langCode, tracks: allTracks, source: 'timedtext' } }
+    const meta = { lang: langCode, tracks: allTracks, source: 'timedtext' }
+    if (dbg) meta.debug = dbg
+    const result = { segments, meta }
     try {
       const env = String(process.env.VERCEL_ENV || '').toLowerCase()
       if (env === 'preview' || env === 'development') res.setHeader('Cache-Control', 'no-store')
