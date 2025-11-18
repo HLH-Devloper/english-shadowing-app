@@ -36,33 +36,34 @@ self.addEventListener('activate', (event) => {
 
 // 拦截请求
 self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  // 仅处理 GET；跳过所有非 GET（例如 POST 到 /api）以避免缓存错误
+  if (req.method !== 'GET') {
+    event.respondWith(fetch(req));
+    return;
+  }
+  // 跳过接口与动态数据路径（/api/* 不缓存）
+  const url = new URL(req.url);
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(req));
+    return;
+  }
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // 缓存命中，返回缓存
-        if (response) {
-          return response;
-        }
-        // 否则发起网络请求
-        return fetch(event.request).then(
-          (response) => {
-            // 检查是否是有效响应
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // 克隆响应
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
-      })
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((resp) => {
+        if (!resp || resp.status !== 200 || resp.type !== 'basic') return resp;
+        const respClone = resp.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          // 尝试写入缓存；失败时静默忽略
+          try { cache.put(req, respClone) } catch (_) {}
+        });
+        return resp;
+      }).catch(() => {
+        // 网络失败时回退到缓存（若有）
+        return caches.match(req);
+      });
+    })
   );
 });
 
