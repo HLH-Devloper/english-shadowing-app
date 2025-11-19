@@ -1,8 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import styled, { keyframes, css } from 'styled-components'
-import BrandDuck from './BrandDuck'
+import styled, { keyframes, css, ThemeProvider } from 'styled-components'
 import Toast from './Toast'
+
+// --- Themes ---
+
+const techTheme = {
+  id: 'tech',
+  bg: '#0f172a',
+  text: '#f8fafc',
+  textSecondary: 'rgba(255, 255, 255, 0.5)',
+  headerBg: 'rgba(15, 23, 42, 0.85)',
+  cardBg: 'rgba(30, 41, 59, 0.7)',
+  userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+  aiBubble: 'rgba(30, 41, 59, 0.7)',
+  accent: '#38bdf8',
+  micActive: '#ef4444',
+  micInactive: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+  border: 'rgba(255, 255, 255, 0.08)',
+  inputBg: 'rgba(30, 41, 59, 0.6)',
+  shadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+}
+
+const auraTheme = {
+  id: 'aura',
+  bg: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', // Soft white/grey
+  bgImage: 'radial-gradient(circle at 50% 0%, #e9d5ff 0%, #fdfbfb 60%)', // Purple glow top
+  text: '#1e293b',
+  textSecondary: 'rgba(30, 41, 59, 0.5)',
+  headerBg: 'rgba(255, 255, 255, 0.7)',
+  cardBg: 'rgba(255, 255, 255, 0.8)',
+  userBubble: 'linear-gradient(135deg, #c084fc 0%, #a855f7 100%)', // Purple gradient
+  aiBubble: '#ffffff',
+  accent: '#a855f7',
+  micActive: '#ec4899', // Pink
+  micInactive: 'linear-gradient(135deg, #d8b4fe, #f472b6)', // Pastel purple/pink
+  border: 'rgba(0, 0, 0, 0.05)',
+  inputBg: 'rgba(255, 255, 255, 0.9)',
+  shadow: '0 10px 30px rgba(168, 85, 247, 0.15)'
+}
 
 // --- Styled Components & Animations ---
 
@@ -12,38 +48,40 @@ const fadeIn = keyframes`
 `
 
 const pulse = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
+  70% { box-shadow: 0 0 0 20px rgba(236, 72, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
 `
 
 const PageContainer = styled.div`
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #0f172a; /* Slate 900 - Deep Tech Dark */
-  color: #f8fafc;
+  background: ${props => props.theme.bgImage || props.theme.bg};
+  color: ${props => props.theme.text};
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: hidden;
+  transition: background 0.5s ease;
 `
 
 const Header = styled.header`
   padding: 16px 24px;
-  background: rgba(15, 23, 42, 0.85);
+  background: ${props => props.theme.headerBg};
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid ${props => props.theme.border};
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 10;
+  transition: all 0.3s ease;
 `
 
-const BackButton = styled.button`
-  background: rgba(255, 255, 255, 0.1);
+const IconButton = styled.button`
+  background: ${props => props.theme.id === 'tech' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
   border: none;
-  color: white;
+  color: ${props => props.theme.text};
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -55,8 +93,8 @@ const BackButton = styled.button`
   font-size: 1.2rem;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateX(-2px);
+    background: ${props => props.theme.id === 'tech' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'};
+    transform: scale(1.05);
   }
 `
 
@@ -64,7 +102,9 @@ const Title = styled.h1`
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  background: linear-gradient(to right, #38bdf8, #818cf8); /* Sky to Indigo */
+  background: ${props => props.theme.id === 'tech'
+    ? 'linear-gradient(to right, #38bdf8, #818cf8)'
+    : 'linear-gradient(to right, #a855f7, #ec4899)'};
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
@@ -88,7 +128,7 @@ const ChatArea = styled.div`
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: ${props => props.theme.textSecondary};
     border-radius: 3px;
   }
 `
@@ -107,16 +147,17 @@ const Bubble = styled.div`
   font-size: 1rem;
   line-height: 1.6;
   position: relative;
+  box-shadow: ${props => props.theme.id === 'aura' && props.role === 'ai' ? '0 4px 15px rgba(0,0,0,0.05)' : 'none'};
   
   ${props => props.role === 'user' ? css`
-    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); /* Blue to Indigo */
+    background: ${props.theme.userBubble};
     color: white;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 20px ${props.theme.id === 'tech' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(168, 85, 247, 0.3)'};
   ` : css`
-    background: rgba(30, 41, 59, 0.7); /* Slate 800 transparent */
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #e2e8f0;
+    background: ${props.theme.aiBubble};
+    border: 1px solid ${props.theme.border};
+    color: ${props.theme.text};
     border-bottom-left-radius: 4px;
     backdrop-filter: blur(10px);
   `}
@@ -124,7 +165,7 @@ const Bubble = styled.div`
 
 const RoleLabel = styled.span`
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: ${props => props.theme.textSecondary};
   margin-bottom: 6px;
   margin-left: ${props => props.role === 'user' ? '0' : '12px'};
   margin-right: ${props => props.role === 'user' ? '12px' : '0'};
@@ -132,26 +173,27 @@ const RoleLabel = styled.span`
 
 const Controls = styled.div`
   padding: 24px;
-  background: rgba(15, 23, 42, 0.95);
+  background: ${props => props.theme.headerBg};
   backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid ${props => props.theme.border};
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding-bottom: max(24px, env(safe-area-inset-bottom));
+  transition: all 0.3s ease;
 `
 
 const InputGroup = styled.div`
   display: flex;
   gap: 12px;
-  background: rgba(30, 41, 59, 0.6);
+  background: ${props => props.theme.inputBg};
   padding: 6px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid ${props => props.theme.border};
   transition: border-color 0.2s;
 
   &:focus-within {
-    border-color: rgba(56, 189, 248, 0.5);
+    border-color: ${props => props.theme.accent};
   }
 `
 
@@ -159,19 +201,19 @@ const Input = styled.input`
   flex: 1;
   background: transparent;
   border: none;
-  color: white;
+  color: ${props => props.theme.text};
   padding: 10px 16px;
   font-size: 1rem;
   outline: none;
   
   &::placeholder {
-    color: rgba(255, 255, 255, 0.3);
+    color: ${props => props.theme.textSecondary};
   }
 `
 
 const SendButton = styled.button`
-  background: #38bdf8; /* Sky 400 */
-  color: #0f172a;
+  background: ${props => props.theme.accent};
+  color: white;
   border: none;
   border-radius: 12px;
   padding: 0 24px;
@@ -180,7 +222,7 @@ const SendButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    background: #7dd3fc;
+    filter: brightness(1.1);
     transform: scale(1.02);
   }
   &:active {
@@ -200,7 +242,7 @@ const MicButton = styled.button`
   height: 72px;
   border-radius: 50%;
   border: none;
-  background: ${props => props.isListening ? '#ef4444' : 'linear-gradient(135deg, #0ea5e9, #6366f1)'};
+  background: ${props => props.isListening ? props.theme.micActive : props.theme.micInactive};
   color: white;
   font-size: 28px;
   cursor: pointer;
@@ -208,8 +250,8 @@ const MicButton = styled.button`
   align-items: center;
   justify-content: center;
   box-shadow: ${props => props.isListening
-    ? '0 0 0 4px rgba(239, 68, 68, 0.2)'
-    : '0 10px 30px rgba(99, 102, 241, 0.4)'};
+    ? `0 0 0 4px ${props.theme.micActive}40`
+    : props.theme.shadow};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
   ${props => props.isListening && css`
@@ -218,7 +260,6 @@ const MicButton = styled.button`
   
   &:hover {
     transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 15px 40px rgba(99, 102, 241, 0.5);
   }
   &:active {
     transform: translateY(0) scale(0.95);
@@ -228,7 +269,7 @@ const MicButton = styled.button`
 const StatusText = styled.span`
   font-size: 0.85rem;
   font-weight: 500;
-  color: ${props => props.isListening ? '#ef4444' : 'rgba(255, 255, 255, 0.5)'};
+  color: ${props => props.isListening ? props.theme.micActive : props.theme.textSecondary};
   letter-spacing: 0.5px;
   text-transform: uppercase;
 `
@@ -237,6 +278,7 @@ const StatusText = styled.span`
 
 export default function ConversationPage() {
   const navigate = useNavigate()
+  const [theme, setTheme] = useState(techTheme)
   const [messages, setMessages] = useState([
     { role: 'ai', text: "Hello! I'm your AI English tutor. What would you like to talk about today?" }
   ])
@@ -252,6 +294,10 @@ export default function ConversationPage() {
 
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
+
+  const toggleTheme = () => {
+    setTheme(prev => prev.id === 'tech' ? auraTheme : techTheme)
+  }
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -350,56 +396,60 @@ export default function ConversationPage() {
   }
 
   return (
-    <PageContainer>
-      <Header>
-        <BackButton onClick={() => navigate('/')}>
-          ←
-        </BackButton>
-        <Title>AI Talk</Title>
-        <div style={{ width: 40 }} /> {/* Spacer for balance */}
-      </Header>
+    <ThemeProvider theme={theme}>
+      <PageContainer>
+        <Header>
+          <IconButton onClick={() => navigate('/')}>
+            ←
+          </IconButton>
+          <Title>AI Talk</Title>
+          <IconButton onClick={toggleTheme} title="Switch Theme">
+            {theme.id === 'tech' ? '✨' : '🌙'}
+          </IconButton>
+        </Header>
 
-      <ChatArea>
-        {messages.map((msg, index) => (
-          <BubbleWrapper key={index} role={msg.role}>
-            <RoleLabel role={msg.role}>{msg.role === 'ai' ? 'AI Tutor' : 'You'}</RoleLabel>
-            <Bubble role={msg.role}>
-              {msg.text}
-            </Bubble>
-          </BubbleWrapper>
-        ))}
-        <div ref={messagesEndRef} />
-      </ChatArea>
+        <ChatArea>
+          {messages.map((msg, index) => (
+            <BubbleWrapper key={index} role={msg.role}>
+              <RoleLabel role={msg.role}>{msg.role === 'ai' ? 'AI Tutor' : 'You'}</RoleLabel>
+              <Bubble role={msg.role}>
+                {msg.text}
+              </Bubble>
+            </BubbleWrapper>
+          ))}
+          <div ref={messagesEndRef} />
+        </ChatArea>
 
-      <Controls>
-        <InputGroup>
-          <Input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
-            placeholder="Type a message..."
-          />
-          <SendButton onClick={() => handleSendMessage(inputText)}>
-            Send
-          </SendButton>
-        </InputGroup>
+        <Controls>
+          <InputGroup>
+            <Input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
+              placeholder="Type a message..."
+            />
+            <SendButton onClick={() => handleSendMessage(inputText)}>
+              Send
+            </SendButton>
+          </InputGroup>
 
-        <MicContainer>
-          <MicButton
-            isListening={isListening}
-            onClick={toggleListening}
-            aria-label={isListening ? "Stop listening" : "Start listening"}
-          >
-            {isListening ? '⏹' : '🎤'}
-          </MicButton>
-          <StatusText isListening={isListening}>
-            {isListening ? 'Listening...' : 'Tap to Speak'}
-          </StatusText>
-        </MicContainer>
-      </Controls>
+          <MicContainer>
+            <MicButton
+              isListening={isListening}
+              onClick={toggleListening}
+              aria-label={isListening ? "Stop listening" : "Start listening"}
+            >
+              {isListening ? '⏹' : '🎤'}
+            </MicButton>
+            <StatusText isListening={isListening}>
+              {isListening ? 'Listening...' : 'Tap to Speak'}
+            </StatusText>
+          </MicContainer>
+        </Controls>
 
-      <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
-    </PageContainer>
+        <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
+      </PageContainer>
+    </ThemeProvider>
   )
 }
