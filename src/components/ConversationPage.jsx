@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BrandDuck from './BrandDuck'
 import Toast from './Toast'
-import './mobile.css' // Reuse mobile styles if needed, or create new ones
+import '../mobile.css' // Reuse mobile styles if needed, or create new ones
 
 export default function ConversationPage() {
   const navigate = useNavigate()
@@ -14,7 +14,7 @@ export default function ConversationPage() {
   const [inputText, setInputText] = useState('')
   const [toastMsg, setToastMsg] = useState('')
   const [toastType, setToastType] = useState('info')
-  
+
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
@@ -30,22 +30,22 @@ export default function ConversationPage() {
       recognition.continuous = false
       recognition.interimResults = false
       recognition.lang = 'en-US'
-      
+
       recognition.onstart = () => setIsListening(true)
       recognition.onend = () => setIsListening(false)
-      
+
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript
         setInputText(transcript)
         handleSendMessage(transcript)
       }
-      
+
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error)
         setIsListening(false)
         showNotice('Speech recognition failed. Please try again or type.', 'error')
       }
-      
+
       recognitionRef.current = recognition
     } else {
       showNotice('Your browser does not support speech recognition.', 'warning')
@@ -69,13 +69,13 @@ export default function ConversationPage() {
     if (synthRef.current.speaking) {
       synthRef.current.cancel()
     }
-    
+
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'en-US'
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
-    
+
     synthRef.current.speak(utterance)
   }
 
@@ -93,15 +93,15 @@ export default function ConversationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newMessages })
       })
-      
+
       if (!response.ok) throw new Error('API request failed')
-      
+
       const data = await response.json()
       const aiText = data.reply || "Sorry, I couldn't understand that."
-      
+
       setMessages(prev => [...prev, { role: 'ai', text: aiText }])
       speakText(aiText)
-      
+
     } catch (error) {
       console.error('Chat error:', error)
       showNotice('Failed to get AI response.', 'error')
@@ -109,18 +109,18 @@ export default function ConversationPage() {
   }
 
   return (
-    <div className="conversation-page" style={{ 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <div className="conversation-page" style={{
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
       background: 'var(--bg)',
       color: 'var(--text)'
     }}>
       {/* Header */}
-      <header style={{ 
-        padding: '16px', 
-        borderBottom: '1px solid var(--border)', 
-        display: 'flex', 
+      <header style={{
+        padding: '16px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
@@ -133,16 +133,16 @@ export default function ConversationPage() {
       </header>
 
       {/* Chat Area */}
-      <div style={{ 
-        flex: 1, 
-        overflowY: 'auto', 
-        padding: '20px', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '16px' 
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px'
       }}>
         {messages.map((msg, index) => (
-          <div key={index} style={{ 
+          <div key={index} style={{
             alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
             maxWidth: '80%',
             padding: '12px 16px',
@@ -158,9 +158,9 @@ export default function ConversationPage() {
       </div>
 
       {/* Controls */}
-      <div style={{ 
-        padding: '20px', 
-        borderTop: '1px solid var(--border)', 
+      <div style={{
+        padding: '20px',
+        borderTop: '1px solid var(--border)',
         background: 'var(--card)',
         display: 'flex',
         flexDirection: 'column',
@@ -168,22 +168,22 @@ export default function ConversationPage() {
       }}>
         {/* Text Input Fallback */}
         <div style={{ display: 'flex', gap: '8px' }}>
-          <input 
-            type="text" 
-            value={inputText} 
+          <input
+            type="text"
+            value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
             placeholder="Type or speak..."
-            style={{ 
-              flex: 1, 
-              padding: '10px', 
-              borderRadius: '8px', 
+            style={{
+              flex: 1,
+              padding: '10px',
+              borderRadius: '8px',
               border: '1px solid var(--border)',
               background: 'var(--bg)',
               color: 'var(--text)'
             }}
           />
-          <button 
+          <button
             onClick={() => handleSendMessage(inputText)}
             style={{
               padding: '0 20px',
@@ -198,15 +198,15 @@ export default function ConversationPage() {
 
         {/* Mic Button */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button 
+          <button
             onClick={toggleListening}
-            style={{ 
-              width: '64px', 
-              height: '64px', 
-              borderRadius: '50%', 
-              background: isListening ? '#ef4444' : 'var(--primary)', 
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: isListening ? '#ef4444' : 'var(--primary)',
               color: '#fff',
-              border: 'none', 
+              border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
               boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
