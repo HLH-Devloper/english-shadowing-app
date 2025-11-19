@@ -2777,3 +2777,172 @@
       margin-bottom: 24px;
       opacity: 0.5;
     }
+
+    /* =========================================
+   Neo-Pop Layout Styles (Restored)
+   ========================================= */
+
+    /* Hero Section */
+    .pop-hero {
+      text-align: center;
+      padding: 60px 20px;
+      margin-bottom: 40px;
+    }
+
+    .hero-title {
+      font-size: 64px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      color: var(--text);
+      text-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+    }
+
+    .hero-title .highlight {
+      background: linear-gradient(90deg, #3b82f6, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 20px;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Main Grid Layout */
+    .pop-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto 40px;
+    }
+
+    /* Make the 3rd item (TED) span full width if it's the last one on a row */
+    .pop-grid> :nth-child(3) {
+      grid-column: span 2;
+    }
+
+    /* Responsive: Stack on mobile */
+    @media (max-width: 768px) {
+      .pop-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .pop-grid> :nth-child(3) {
+        grid-column: span 1;
+      }
+
+      .hero-title {
+        font-size: 42px;
+      }
+    }
+
+    /* Pop Card Styles */
+    .pop-card {
+      background: var(--bg);
+      border: 3px solid var(--border);
+      border-radius: 24px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      position: relative;
+      overflow: hidden;
+      min-height: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 6px 6px 0px var(--border);
+    }
+
+    .pop-card:hover {
+      transform: translate(-4px, -4px);
+      box-shadow: 10px 10px 0px var(--border);
+      border-color: var(--primary);
+    }
+
+    .pop-card.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 6px 6px 0px #000;
+      /* Black shadow on active */
+    }
+
+    .pop-card.active h3,
+    .pop-card.active p,
+    .pop-card.active .card-icon {
+      color: #fff;
+    }
+
+    .card-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    .card-content h3 {
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0 0 12px;
+      color: var(--text);
+    }
+
+    .card-content p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* Content Area */
+    .pop-content-area {
+      max-width: 900px;
+      margin: 0 auto;
+      padding-bottom: 60px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Upload Zone */
+    .upload-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+
+    .file-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+    }
+
+    .file-drop-card {
+      background: var(--card);
+      border: 2px dashed var(--muted);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .file-drop-card:hover {
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.05);
+    }
