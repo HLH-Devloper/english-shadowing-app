@@ -981,29 +981,18 @@ export default function ConversationPage() {
         role: 'ai',
         text: conversation,
         correction: correction
-      }])
-
-      speakText(conversation, aiMsgId)
-    } catch (error) {
-      console.error('Chat error:', error)
-      showNotice(`AI Error: ${error.message}`, 'error')
-    }
-  }
-
-  const handleScenarioChange = (newScenario) => {
-    setScenario(newScenario)
     showNotice(`Scenario changed to: ${newScenario}`, 'success')
   }
 
   const handleDifficultyChange = (newDifficulty) => {
     setDifficulty(newDifficulty)
-    showNotice(`Difficulty set to: ${newDifficulty}`, 'success')
+    showNotice(`Difficulty set to: ${ newDifficulty }`, 'success')
   }
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    return `${ mins.toString().padStart(2, '0') }: ${ secs.toString().padStart(2, '0') }`
   }
 
   return (
