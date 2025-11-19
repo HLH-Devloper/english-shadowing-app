@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes, css, ThemeProvider } from 'styled-components'
+import { onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db } from '../firebase'
 import Toast from './Toast'
 
 // --- Themes ---
@@ -8,6 +11,7 @@ import Toast from './Toast'
 const techTheme = {
   id: 'tech',
   bg: '#0f172a',
+  bgImage: 'radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 70%)',
   text: '#f8fafc',
   textSecondary: 'rgba(255, 255, 255, 0.5)',
   headerBg: 'rgba(15, 23, 42, 0.85)',
@@ -28,7 +32,7 @@ const techTheme = {
 
 const auraTheme = {
   id: 'aura',
-  bg: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)',
+  bg: '#fdfbfb',
   bgImage: 'radial-gradient(circle at 50% 0%, #e9d5ff 0%, #fdfbfb 60%)',
   text: '#1e293b',
   textSecondary: 'rgba(30, 41, 59, 0.5)',
@@ -245,6 +249,23 @@ const TranslateBtn = styled.button`
   opacity: 0.8;
   
   &:hover { opacity: 1; text-decoration: underline; }
+`
+
+const ReplayBtn = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.role === 'user' ? 'rgba(255,255,255,0.8)' : props.theme.accent};
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all 0.2s;
+  
+  &:hover { opacity: 1; transform: scale(1.1); }
 `
 
 const LoadingDots = styled.span`
@@ -480,7 +501,7 @@ const OptionButton = styled.button`
   text-align: left;
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Changed to space-between for checkmark */
+  justify-content: space-between;
   gap: 10px;
   font-size: 0.85rem;
   transition: all 0.2s;
@@ -503,6 +524,64 @@ const Checkmark = styled.span`
 
 const Icon = styled.span`
   font-size: 1rem;
+`
+
+// --- Member Overlay ---
+
+const MemberOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  color: white;
+`
+
+const MemberCard = styled.div`
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  padding: 40px;
+  border-radius: 24px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+`
+
+const MemberTitle = styled.h2`
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+`
+
+const MemberDesc = styled.p`
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  opacity: 0.9;
+`
+
+const UpgradeButton = styled.button`
+  background: white;
+  color: #4f46e5;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  
+  &:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
 `
 
 // --- Constants ---
@@ -549,6 +628,9 @@ export default function ConversationPage() {
   // Speaking State
   const [speakingMsgId, setSpeakingMsgId] = useState(null)
 
+  // Membership State
+  const [isMember, setIsMember] = useState(null) // null = loading, false = not member, true = member
+
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
@@ -556,6 +638,34 @@ export default function ConversationPage() {
 
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
+
+  // Check Membership
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid))
+          if (snap.exists()) {
+            const data = snap.data()
+            // Check if membership is 'member'
+            if (data.membership === 'member') {
+              setIsMember(true)
+            } else {
+              setIsMember(false)
+            }
+          } else {
+            setIsMember(false)
+          }
+        } catch (e) {
+          console.error('Error fetching user profile:', e)
+          setIsMember(false)
+        }
+      } else {
+        setIsMember(false)
+      }
+    })
+    return () => unsub()
+  }, [])
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -649,17 +759,16 @@ export default function ConversationPage() {
     const utterance = new SpeechSynthesisUtterance(cleanText)
     utterance.lang = 'en-US'
 
-    // Note: onstart might fire slightly after we want, so we set state in handleSendMessage too
     utterance.onstart = () => {
-      setSpeakingMsgId(msgId)
+      if (msgId) setSpeakingMsgId(msgId)
     }
 
     utterance.onend = () => {
-      setSpeakingMsgId(null)
+      if (msgId) setSpeakingMsgId(null)
     }
 
     utterance.onerror = () => {
-      setSpeakingMsgId(null)
+      if (msgId) setSpeakingMsgId(null)
     }
 
     synthRef.current.speak(utterance)
@@ -766,7 +875,6 @@ export default function ConversationPage() {
 
       const aiMsgId = Date.now().toString() + '-ai'
 
-      // Set speaking state IMMEDIATELY before rendering
       setSpeakingMsgId(aiMsgId)
 
       setMessages(prev => [...prev, {
@@ -802,6 +910,19 @@ export default function ConversationPage() {
   return (
     <ThemeProvider theme={theme}>
       <PageContainer>
+        {/* Member Check Overlay */}
+        {isMember === false && (
+          <MemberOverlay>
+            <MemberCard>
+              <MemberTitle>💎 Member Only</MemberTitle>
+              <MemberDesc>
+                The AI Speaking Partner is an exclusive feature for our premium members. Upgrade now to unlock unlimited conversations!
+              </MemberDesc>
+              <UpgradeButton onClick={() => navigate('/')}>Go Back</UpgradeButton>
+            </MemberCard>
+          </MemberOverlay>
+        )}
+
         <Header>
           <IconButton onClick={() => navigate('/')}>←</IconButton>
           <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -836,6 +957,16 @@ export default function ConversationPage() {
                 )}
 
                 {msg.text}
+
+                {/* Audio Replay Button */}
+                <ReplayBtn
+                  role={msg.role}
+                  onClick={(e) => { e.stopPropagation(); speakText(msg.text, null) }}
+                  title="Play Audio"
+                >
+                  🔊
+                </ReplayBtn>
+
                 {msg.role === 'ai' && (
                   <>
                     {msg.translation && (
