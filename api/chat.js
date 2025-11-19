@@ -121,7 +121,9 @@ RULES:
 
 FINAL STEP:
 At the very end of your response, generate 3 short, natural follow-up responses that the user might say next.
-- Based on the current context and difficulty level.
+- These must be RELEVANT to your last response and help the user continue the conversation.
+- Do NOT repeat what the user just said.
+- Provide variety (e.g., one agreement/answer, one follow-up question, one topic shift).
 - Format: ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"]`;
 
         // Debug: Check environment variables (masked)
