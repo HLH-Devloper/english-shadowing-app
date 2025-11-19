@@ -395,6 +395,14 @@ const MicContainer = styled.div`
   gap: 12px;
 `
 
+const StatusText = styled.span`
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: ${props => props.isListening ? props.theme.micActive : props.theme.textSecondary};
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+`
+
 // --- Settings Sidebar ---
 
 const SidebarOverlay = styled.div`
