@@ -17,13 +17,14 @@ const techTheme = {
   headerBg: 'rgba(15, 23, 42, 0.7)',
   cardBg: 'rgba(30, 41, 59, 0.7)',
   userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+  userText: '#ffffff',
   aiBubble: 'rgba(30, 41, 59, 0.7)',
   correctionBg: 'rgba(239, 68, 68, 0.15)',
   correctionBorder: 'rgba(239, 68, 68, 0.3)',
   accent: '#38bdf8',
   micActive: '#ef4444',
   micInactive: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-  border: 'rgba(255, 255, 255, 0.08)',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
   inputBg: 'rgba(30, 41, 59, 0.6)',
   shadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
   divider: 'rgba(255, 255, 255, 0.1)',
@@ -39,17 +40,41 @@ const auraTheme = {
   headerBg: 'rgba(255, 255, 255, 0.7)',
   cardBg: 'rgba(255, 255, 255, 0.8)',
   userBubble: 'linear-gradient(135deg, #c084fc 0%, #a855f7 100%)',
+  userText: '#ffffff',
   aiBubble: '#ffffff',
   correctionBg: 'rgba(254, 202, 202, 0.3)',
   correctionBorder: 'rgba(252, 165, 165, 0.5)',
   accent: '#a855f7',
   micActive: '#ec4899',
   micInactive: 'linear-gradient(135deg, #d8b4fe, #f472b6)',
-  border: 'rgba(0, 0, 0, 0.05)',
+  border: '1px solid rgba(0, 0, 0, 0.05)',
   inputBg: 'rgba(255, 255, 255, 0.9)',
   shadow: '0 10px 30px rgba(168, 85, 247, 0.15)',
   divider: 'rgba(0, 0, 0, 0.05)',
   sidebarBg: 'rgba(255, 255, 255, 0.95)'
+}
+
+const popTheme = {
+  id: 'pop',
+  bg: '#fefce8', // Yellow-50
+  bgImage: 'none',
+  text: '#000000',
+  textSecondary: 'rgba(0, 0, 0, 0.6)',
+  headerBg: '#ffffff',
+  cardBg: '#ffffff',
+  userBubble: '#000000',
+  userText: '#facc15', // Yellow-400
+  aiBubble: '#ffffff',
+  correctionBg: '#fdf2f8', // Pink-50
+  correctionBorder: '#f472b6',
+  accent: '#ec4899', // Pink-500
+  micActive: '#ef4444',
+  micInactive: '#000000',
+  border: '2px solid #000000',
+  inputBg: '#ffffff',
+  shadow: '4px 4px 0px #000000',
+  divider: '#000000',
+  sidebarBg: '#fefce8'
 }
 
 // --- Styled Components ---
@@ -75,7 +100,8 @@ const PageContainer = styled.div`
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: ${props => props.theme.bgImage || props.theme.bg};
+  background: ${props => props.theme.bgImage !== 'none' ? props.theme.bgImage : props.theme.bg};
+  background-color: ${props => props.theme.bg};
   background-size: cover;
   background-attachment: fixed;
   color: ${props => props.theme.text};
@@ -89,7 +115,7 @@ const Header = styled.header`
   padding: 16px 24px;
   background: ${props => props.theme.headerBg};
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid ${props => props.theme.border};
+  border-bottom: ${props => props.theme.border};
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -97,6 +123,7 @@ const Header = styled.header`
   top: 0;
   z-index: 10;
   transition: all 0.3s ease;
+  box-shadow: ${props => props.theme.id === 'pop' ? props.theme.shadow : 'none'};
 `
 
 const IconButton = styled.button`
@@ -112,10 +139,12 @@ const IconButton = styled.button`
   cursor: pointer;
   transition: all 0.2s;
   font-size: 1.2rem;
+  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : 'none'};
 
   &:hover {
     background: ${props => props.theme.id === 'tech' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'};
     transform: scale(1.05);
+    box-shadow: ${props => props.theme.id === 'pop' ? '2px 2px 0px #000' : 'none'};
   }
 `
 
@@ -123,11 +152,14 @@ const Title = styled.h1`
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  background: ${props => props.theme.id === 'tech'
-    ? 'linear-gradient(to right, #38bdf8, #818cf8)'
-    : 'linear-gradient(to right, #a855f7, #ec4899)'};
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background: ${props => {
+    if (props.theme.id === 'tech') return 'linear-gradient(to right, #38bdf8, #818cf8)'
+    if (props.theme.id === 'aura') return 'linear-gradient(to right, #a855f7, #ec4899)'
+    return 'none'
+  }};
+  color: ${props => props.theme.id === 'pop' ? '#000' : 'transparent'};
+  -webkit-background-clip: ${props => props.theme.id === 'pop' ? 'border-box' : 'text'};
+  -webkit-text-fill-color: ${props => props.theme.id === 'pop' ? 'currentColor' : 'transparent'};
   margin: 0;
   text-transform: uppercase;
 `
@@ -141,6 +173,9 @@ const ModeBadge = styled.div`
   font-weight: 600;
   margin-right: 12px;
   letter-spacing: 0.5px;
+  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : 'none'};
+  background: ${props => props.theme.id === 'pop' ? '#fff' : undefined};
+  box-shadow: ${props => props.theme.id === 'pop' ? '2px 2px 0px #000' : 'none'};
 `
 
 const ChatArea = styled.div`
@@ -176,6 +211,8 @@ const CorrectionBubble = styled.div`
   margin-bottom: 8px;
   border-bottom-left-radius: 4px;
   backdrop-filter: blur(10px);
+  box-shadow: ${props => props.theme.id === 'pop' ? '4px 4px 0px #000' : 'none'};
+  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : undefined};
 `
 
 const Bubble = styled.div`
@@ -189,15 +226,17 @@ const Bubble = styled.div`
   
   ${props => props.role === 'user' ? css`
     background: ${props.theme.userBubble};
-    color: white;
+    color: ${props.theme.userText};
     border-bottom-right-radius: 4px;
-    box-shadow: 0 8px 20px ${props.theme.id === 'tech' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(168, 85, 247, 0.3)'};
+    box-shadow: ${props.theme.id === 'pop' ? '4px 4px 0px #000' : (props.theme.id === 'tech' ? '0 8px 20px rgba(59, 130, 246, 0.3)' : '0 8px 20px rgba(168, 85, 247, 0.3)')};
+    border: ${props.theme.id === 'pop' ? '2px solid #000' : 'none'};
   ` : css`
     background: ${props.theme.aiBubble};
-    border: 1px solid ${props.theme.border};
+    border: ${props.theme.border};
     color: ${props.theme.text};
     border-bottom-left-radius: 4px;
     backdrop-filter: blur(10px);
+    box-shadow: ${props.theme.id === 'pop' ? '4px 4px 0px #000' : 'none'};
   `}
 `
 
@@ -281,12 +320,13 @@ const Controls = styled.div`
   padding: 24px;
   background: ${props => props.theme.headerBg};
   backdrop-filter: blur(20px);
-  border-top: 1px solid ${props => props.theme.border};
+  border-top: ${props => props.theme.border};
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding-bottom: max(24px, env(safe-area-inset-bottom));
   transition: all 0.3s ease;
+  box-shadow: ${props => props.theme.id === 'pop' ? '0 -4px 0px #000' : 'none'};
 `
 
 const InputGroup = styled.div`
@@ -295,8 +335,9 @@ const InputGroup = styled.div`
   background: ${props => props.theme.inputBg};
   padding: 6px;
   border-radius: 16px;
-  border: 1px solid ${props => props.theme.border};
+  border: ${props => props.theme.border};
   transition: border-color 0.2s;
+  box-shadow: ${props => props.theme.id === 'pop' ? '4px 4px 0px #000' : 'none'};
 
   &:focus-within { border-color: ${props => props.theme.accent}; }
 `
@@ -321,6 +362,8 @@ const SendButton = styled.button`
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
+  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : 'none'};
+  box-shadow: ${props => props.theme.id === 'pop' ? '2px 2px 0px #000' : 'none'};
   
   &:hover { filter: brightness(1.1); transform: scale(1.02); }
   &:active { transform: scale(0.98); }
@@ -335,8 +378,8 @@ const RecordingBar = styled.div`
   background: ${props => props.theme.id === 'tech' ? '#1e293b' : '#ffffff'};
   padding: 16px 24px;
   border-radius: 24px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  border: 1px solid ${props => props.theme.border};
+  box-shadow: ${props => props.theme.id === 'pop' ? '4px 4px 0px #000' : '0 10px 30px rgba(0,0,0,0.1)'};
+  border: ${props => props.theme.border};
   animation: ${fadeIn} 0.3s ease;
 `
 
@@ -356,6 +399,7 @@ const WaveBar = styled.div`
   border-radius: 2px;
   animation: ${wave} 1s ease-in-out infinite;
   animation-delay: ${props => props.delay}s;
+  border: ${props => props.theme.id === 'pop' ? '1px solid #000' : 'none'};
 `
 
 const Timer = styled.span`
@@ -376,6 +420,7 @@ const ActionButton = styled.button`
   cursor: pointer;
   transition: all 0.2s;
   font-size: 1.2rem;
+  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : 'none'};
   
   ${props => props.variant === 'cancel' ? css`
     background: rgba(0,0,0,0.05);
@@ -384,7 +429,7 @@ const ActionButton = styled.button`
   ` : css`
     background: #22c55e; /* Green for send */
     color: white;
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    box-shadow: ${props.theme.id === 'pop' ? '2px 2px 0px #000' : '0 4px 12px rgba(34, 197, 94, 0.3)'};
     &:hover { transform: scale(1.05); }
   `}
 `
@@ -403,6 +448,7 @@ const MicButton = styled.button`
   justify-content: center;
   box-shadow: ${props => props.theme.shadow};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : 'none'};
   
   &:hover {
     transform: translateY(-2px) scale(1.05);
@@ -457,7 +503,7 @@ const Sidebar = styled.div`
   display: flex;
   flex-direction: column;
   padding: 20px;
-  border-left: 1px solid ${props => props.theme.border};
+  border-left: ${props => props.theme.border};
 `
 
 const SidebarHeader = styled.div`
@@ -507,6 +553,8 @@ const OptionButton = styled.button`
   gap: 10px;
   font-size: 0.85rem;
   transition: all 0.2s;
+  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : (props.active ? props.theme.accent : props.theme.border)};
+  box-shadow: ${props => props.theme.id === 'pop' && props.active ? '2px 2px 0px #000' : 'none'};
 
   &:hover {
     background: ${props => props.active ? props.theme.accent : 'rgba(255, 255, 255, 0.1)'};
@@ -638,6 +686,10 @@ export default function ConversationPage() {
   const messagesEndRef = useRef(null)
   const timerRef = useRef(null)
 
+  // Media Recorder Refs
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
+
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
 
@@ -725,33 +777,73 @@ export default function ConversationPage() {
     }
   }, [])
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  const startRecording = () => {
+  const startRecording = async () => {
     setInputText('')
-    recognitionRef.current?.start()
+    audioChunksRef.current = []
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      recorder.start()
+      mediaRecorderRef.current = recorder
+      recognitionRef.current?.start()
+    } catch (err) {
+      console.error("Error accessing microphone:", err)
+      showNotice("Could not access microphone", "error")
+    }
   }
 
   const stopRecording = () => {
     setIsListening(false)
     recognitionRef.current?.stop()
     if (timerRef.current) clearInterval(timerRef.current)
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+      // Stop all tracks to release mic
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+    }
   }
 
   const cancelRecording = () => {
     stopRecording()
     setInputText('')
+    audioChunksRef.current = []
   }
 
   const sendRecording = () => {
+    // We need to wait for the recorder to actually stop and produce the blob
+    // Since stopRecording() calls stop(), the 'stop' event on mediaRecorder will fire
+    // We can hook into that or just wait a tiny bit. 
+    // Better approach: wrap the stop logic in a promise or use the onstop handler.
+
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const audioUrl = URL.createObjectURL(audioBlob)
+        handleSendMessage(inputText, audioUrl)
+      }
+    }
+
     stopRecording()
-    handleSendMessage(inputText)
   }
 
-  const speakText = (text, msgId) => {
+  const speakText = (text, msgId, audioUrl) => {
+    // If there is a recorded audio URL (user's voice), play that
+    if (audioUrl) {
+      const audio = new Audio(audioUrl)
+      audio.play()
+      return
+    }
+
+    // Otherwise use TTS (AI voice)
     if (synthRef.current.speaking) {
       synthRef.current.cancel()
     }
@@ -828,10 +920,15 @@ export default function ConversationPage() {
     }
   }
 
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = async (text, audioUrl = null) => {
     if (!text.trim()) return
 
-    const newMessages = [...messages, { id: Date.now().toString(), role: 'user', text }]
+    const newMessages = [...messages, {
+      id: Date.now().toString(),
+      role: 'user',
+      text,
+      audioUrl // Store the audio URL if present
+    }]
     setMessages(newMessages)
     setInputText('')
 
@@ -963,7 +1060,7 @@ export default function ConversationPage() {
                 {/* Audio Replay Button */}
                 <ReplayBtn
                   role={msg.role}
-                  onClick={(e) => { e.stopPropagation(); speakText(msg.text, null) }}
+                  onClick={(e) => { e.stopPropagation(); speakText(msg.text, null, msg.audioUrl) }}
                   title="Play Audio"
                 >
                   🔊
@@ -1058,6 +1155,13 @@ export default function ConversationPage() {
               >
                 <OptionContent><Icon>☁️</Icon> Aura (Light)</OptionContent>
                 {theme.id === 'aura' && <Checkmark>✓</Checkmark>}
+              </OptionButton>
+              <OptionButton
+                active={theme.id === 'pop'}
+                onClick={() => setTheme(popTheme)}
+              >
+                <OptionContent><Icon>🍭</Icon> Pop (Dopamine)</OptionContent>
+                {theme.id === 'pop' && <Checkmark>✓</Checkmark>}
               </OptionButton>
             </OptionGrid>
           </Section>
