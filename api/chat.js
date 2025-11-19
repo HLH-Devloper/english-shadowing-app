@@ -53,10 +53,18 @@ export default async function handler(req, res) {
         let text = '';
         const triedModels = [];
 
-        const history = messages.slice(0, -1).map(msg => ({
+        // Construct history for Gemini
+        let history = messages.slice(0, -1).map(msg => ({
             role: msg.role === 'ai' ? 'model' : 'user',
             parts: [{ text: msg.text }]
         }));
+
+        // Gemini requires the first message in history to be from 'user'
+        // If the history starts with a 'model' message (e.g. the initial greeting), remove it.
+        while (history.length > 0 && history[0].role === 'model') {
+            history.shift();
+        }
+
         const lastMessage = messages[messages.length - 1].text;
 
         for (const modelName of candidateModels) {
