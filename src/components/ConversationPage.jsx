@@ -407,6 +407,11 @@ export default function ConversationPage() {
       })
 
       const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.message || data.error)
+      }
+
       if (data.reply) {
         setMessages(prev => {
           const newMsgs = [...prev]
@@ -416,7 +421,7 @@ export default function ConversationPage() {
       }
     } catch (error) {
       console.error('Translation error:', error)
-      showNotice('Translation failed.', 'error')
+      showNotice(`Translation failed: ${error.message}`, 'error')
     }
   }
 

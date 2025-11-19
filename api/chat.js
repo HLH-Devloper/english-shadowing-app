@@ -74,14 +74,19 @@ export default async function handler(req, res) {
             const systemPrompt = `You are a helpful and encouraging English language tutor for a Chinese student.
 Your goal is to help the user practice spoken English.
 Rules:
-1. ALWAYS reply in English. Do not use Chinese unless absolutely necessary for a specific explanation requested by the user.
-2. If the user makes a grammar, spelling, or expression mistake, gently correct it first (e.g., "You said... Better: ..."), and then respond to the content of their message.
-3. If the user speaks Chinese, answer in English and encourage them to try saying it in English.
+1. IF the user makes a mistake (grammar, spelling, or expression):
+   - FIRST, point out the mistake and explain it using a mix of Chinese and English (e.g., "You said '...' but it's better to say '...' because...").
+   - THEN, provide the correct English expression.
+   - FINALLY, continue the conversation in English.
+2. IF the user's English is correct:
+   - Simply reply in English to continue the conversation.
+3. IF the user speaks Chinese:
+   - Reply in English and encourage them to try saying it in English.
 4. Keep your responses concise and conversational.`;
 
             const systemHistory = [
                 { role: 'user', parts: [{ text: systemPrompt }] },
-                { role: 'model', parts: [{ text: "Understood. I will act as your English tutor. I will correct your mistakes and speak only in English." }] }
+                { role: 'model', parts: [{ text: "Understood. I will act as your English tutor. I will correct mistakes using Chinese/English explanations, but keep the main conversation in English." }] }
             ];
             // Prepend system prompt to history
             history = [...systemHistory, ...history];
