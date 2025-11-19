@@ -26,7 +26,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing request body' });
         }
 
-        const { messages } = req.body;
+        const { messages, scenario = 'Just Vibe', difficulty = 'Intermediate' } = req.body;
 
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
             return res.status(400).json({ error: 'Invalid or empty messages array' });
@@ -79,7 +79,6 @@ export default async function handler(req, res) {
                 .filter(msg => msg.text !== ''); // Remove empty messages
 
             // 2. Merge Consecutive Roles
-            // Gemini requires strict User -> Model -> User alternation
             if (rawHistory.length > 0) {
                 let mergedHistory = [];
                 let currentMsg = rawHistory[0];
@@ -87,7 +86,6 @@ export default async function handler(req, res) {
                 for (let i = 1; i < rawHistory.length; i++) {
                     const nextMsg = rawHistory[i];
                     if (nextMsg.role === currentMsg.role) {
-                        // Merge text with newline
                         currentMsg.text += '\n' + nextMsg.text;
                     } else {
                         mergedHistory.push(currentMsg);
@@ -99,7 +97,6 @@ export default async function handler(req, res) {
             }
 
             // 3. Ensure Start with User
-            // If first message is model, remove it
             while (rawHistory.length > 0 && rawHistory[0].role === 'model') {
                 rawHistory.shift();
             }
@@ -110,8 +107,28 @@ export default async function handler(req, res) {
                 parts: [{ text: msg.text }]
             }));
 
-            const systemPrompt = `You are a helpful and encouraging English language tutor for a Chinese student.
-Your goal is to help the user practice spoken English.
+            // --- Dynamic System Prompt Construction ---
+
+            let difficultyInstruction = '';
+            switch (difficulty) {
+                case 'Beginner':
+                    difficultyInstruction = 'Use simple vocabulary (CEFR A1-A2). Speak slowly and clearly using short sentences. Avoid idioms.';
+                    break;
+                case 'Advanced':
+                    difficultyInstruction = 'Use sophisticated vocabulary and idioms (CEFR C1-C2). Speak naturally and fluently with complex sentence structures.';
+                    break;
+                case 'Intermediate':
+                default:
+                    difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression.';
+                    break;
+            }
+
+            const systemPrompt = `You are a helpful and encouraging English language tutor.
+Current Scenario: ${scenario}
+Difficulty Level: ${difficulty}
+
+Your goal is to help the user practice spoken English within this scenario.
+${difficultyInstruction}
 
 RESPONSE FORMAT:
 If the user makes a mistake (grammar, spelling, unnatural expression):
@@ -124,29 +141,23 @@ RULES:
 1. CORRECTION SECTION (before |||):
    - Use Chinese primarily to explain the mistake.
    - Provide the corrected English sentence.
-   - Example: "你用了 'traval'，正确的拼写是 'travel'。你可以说：I want to travel."
 2. RESPONSE SECTION (after ||| or if no mistake):
    - Pure English.
-   - Continue the conversation naturally.
+   - Continue the conversation naturally based on the '${scenario}' scenario.
    - Do NOT mention the mistake here.
 3. If the user speaks Chinese:
    - Reply in English (Response Section) and encourage them to speak English.
-   - You can add a Chinese tip in the Correction Section if needed.
 4. Do NOT output ||| if there is no correction.`;
 
             const systemHistory = [
                 { role: 'user', parts: [{ text: systemPrompt }] },
-                { role: 'model', parts: [{ text: "Understood. I will use the '|||' separator to distinguish between Chinese corrections and English conversational responses." }] }
+                { role: 'model', parts: [{ text: `Understood. I will act as your English tutor for the '${scenario}' scenario at '${difficulty}' level.` }] }
             ];
 
-            // Prepend system prompt
-            // Note: systemHistory ends with 'model'.
-            // If 'history' (user conversation) starts with 'user', we are good.
-            // If 'history' is empty, we are also good (lastMessage is user).
             history = [...systemHistory, ...history];
         }
 
-        debugHistory = history; // Save for error reporting
+        debugHistory = history;
 
         if (!lastMessageText || lastMessageText.trim() === '') {
             throw new Error('Last message text is empty');
@@ -187,8 +198,7 @@ RULES:
             debug: {
                 hasKey: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
                 nodeVersion: process.version,
-                historyLength: debugHistory.length,
-                historyPreview: debugHistory.slice(-3) // Show last 3 messages in debug
+                historyLength: debugHistory.length
             }
         });
     }

@@ -14,7 +14,7 @@ const techTheme = {
   cardBg: 'rgba(30, 41, 59, 0.7)',
   userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
   aiBubble: 'rgba(30, 41, 59, 0.7)',
-  correctionBg: 'rgba(239, 68, 68, 0.15)', // Red tint for correction
+  correctionBg: 'rgba(239, 68, 68, 0.15)',
   correctionBorder: 'rgba(239, 68, 68, 0.3)',
   accent: '#38bdf8',
   micActive: '#ef4444',
@@ -22,31 +22,33 @@ const techTheme = {
   border: 'rgba(255, 255, 255, 0.08)',
   inputBg: 'rgba(30, 41, 59, 0.6)',
   shadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-  divider: 'rgba(255, 255, 255, 0.1)'
+  divider: 'rgba(255, 255, 255, 0.1)',
+  sidebarBg: 'rgba(15, 23, 42, 0.95)'
 }
 
 const auraTheme = {
   id: 'aura',
-  bg: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', // Soft white/grey
-  bgImage: 'radial-gradient(circle at 50% 0%, #e9d5ff 0%, #fdfbfb 60%)', // Purple glow top
+  bg: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)',
+  bgImage: 'radial-gradient(circle at 50% 0%, #e9d5ff 0%, #fdfbfb 60%)',
   text: '#1e293b',
   textSecondary: 'rgba(30, 41, 59, 0.5)',
   headerBg: 'rgba(255, 255, 255, 0.7)',
   cardBg: 'rgba(255, 255, 255, 0.8)',
-  userBubble: 'linear-gradient(135deg, #c084fc 0%, #a855f7 100%)', // Purple gradient
+  userBubble: 'linear-gradient(135deg, #c084fc 0%, #a855f7 100%)',
   aiBubble: '#ffffff',
-  correctionBg: 'rgba(254, 202, 202, 0.3)', // Pastel red
+  correctionBg: 'rgba(254, 202, 202, 0.3)',
   correctionBorder: 'rgba(252, 165, 165, 0.5)',
   accent: '#a855f7',
-  micActive: '#ec4899', // Pink
-  micInactive: 'linear-gradient(135deg, #d8b4fe, #f472b6)', // Pastel purple/pink
+  micActive: '#ec4899',
+  micInactive: 'linear-gradient(135deg, #d8b4fe, #f472b6)',
   border: 'rgba(0, 0, 0, 0.05)',
   inputBg: 'rgba(255, 255, 255, 0.9)',
   shadow: '0 10px 30px rgba(168, 85, 247, 0.15)',
-  divider: 'rgba(0, 0, 0, 0.05)'
+  divider: 'rgba(0, 0, 0, 0.05)',
+  sidebarBg: 'rgba(255, 255, 255, 0.95)'
 }
 
-// --- Styled Components & Animations ---
+// --- Styled Components ---
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -68,6 +70,7 @@ const PageContainer = styled.div`
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: hidden;
   transition: background 0.5s ease;
+  position: relative;
 `
 
 const Header = styled.header`
@@ -117,6 +120,17 @@ const Title = styled.h1`
   text-transform: uppercase;
 `
 
+const ModeBadge = styled.div`
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: ${props => props.theme.id === 'tech' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(168, 85, 247, 0.1)'};
+  color: ${props => props.theme.accent};
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 12px;
+  letter-spacing: 0.5px;
+`
+
 const ChatArea = styled.div`
   flex: 1;
   overflow-y: auto;
@@ -126,17 +140,9 @@ const ChatArea = styled.div`
   gap: 24px;
   scroll-behavior: smooth;
   
-  /* Custom Scrollbar */
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: ${props => props.theme.textSecondary};
-    border-radius: 3px;
-  }
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: ${props => props.theme.textSecondary}; border-radius: 3px; }
 `
 
 const BubbleWrapper = styled.div`
@@ -215,10 +221,7 @@ const TranslateBtn = styled.button`
   gap: 4px;
   opacity: 0.8;
   
-  &:hover {
-    opacity: 1;
-    text-decoration: underline;
-  }
+  &:hover { opacity: 1; text-decoration: underline; }
 `
 
 const Controls = styled.div`
@@ -242,9 +245,7 @@ const InputGroup = styled.div`
   border: 1px solid ${props => props.theme.border};
   transition: border-color 0.2s;
 
-  &:focus-within {
-    border-color: ${props => props.theme.accent};
-  }
+  &:focus-within { border-color: ${props => props.theme.accent}; }
 `
 
 const Input = styled.input`
@@ -255,10 +256,7 @@ const Input = styled.input`
   padding: 10px 16px;
   font-size: 1rem;
   outline: none;
-  
-  &::placeholder {
-    color: ${props => props.theme.textSecondary};
-  }
+  &::placeholder { color: ${props => props.theme.textSecondary}; }
 `
 
 const SendButton = styled.button`
@@ -271,13 +269,8 @@ const SendButton = styled.button`
   cursor: pointer;
   transition: all 0.2s;
   
-  &:hover {
-    filter: brightness(1.1);
-    transform: scale(1.02);
-  }
-  &:active {
-    transform: scale(0.98);
-  }
+  &:hover { filter: brightness(1.1); transform: scale(1.02); }
+  &:active { transform: scale(0.98); }
 `
 
 const MicContainer = styled.div`
@@ -299,21 +292,13 @@ const MicButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: ${props => props.isListening
-    ? `0 0 0 4px ${props.theme.micActive}40`
-    : props.theme.shadow};
+  box-shadow: ${props => props.isListening ? `0 0 0 4px ${props.theme.micActive}40` : props.theme.shadow};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
-  ${props => props.isListening && css`
-    animation: ${pulse} 1.5s infinite;
-  `}
+  ${props => props.isListening && css`animation: ${pulse} 1.5s infinite;`}
   
-  &:hover {
-    transform: translateY(-2px) scale(1.05);
-  }
-  &:active {
-    transform: translateY(0) scale(0.95);
-  }
+  &:hover { transform: translateY(-2px) scale(1.05); }
+  &:active { transform: translateY(0) scale(0.95); }
 `
 
 const StatusText = styled.span`
@@ -323,6 +308,116 @@ const StatusText = styled.span`
   letter-spacing: 0.5px;
   text-transform: uppercase;
 `
+
+// --- Settings Sidebar ---
+
+const SidebarOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 99;
+  opacity: ${props => props.isOpen ? 1 : 0};
+  pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
+  transition: opacity 0.3s ease;
+`
+
+const Sidebar = styled.div`
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background: ${props => props.theme.sidebarBg};
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  transform: translateX(${props => props.isOpen ? '0' : '100%'});
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border-left: 1px solid ${props => props.theme.border};
+`
+
+const SidebarHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+`
+
+const SidebarTitle = styled.h2`
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+  color: ${props => props.theme.text};
+`
+
+const SectionTitle = styled.h3`
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: ${props => props.theme.textSecondary};
+  margin: 0 0 12px 0;
+  letter-spacing: 1px;
+`
+
+const Section = styled.div`
+  margin-bottom: 32px;
+`
+
+const OptionGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+`
+
+const OptionButton = styled.button`
+  background: ${props => props.active ? props.theme.accent : 'rgba(255, 255, 255, 0.05)'};
+  color: ${props => props.active ? '#fff' : props.theme.text};
+  border: 1px solid ${props => props.active ? props.theme.accent : props.theme.border};
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${props => props.active ? props.theme.accent : 'rgba(255, 255, 255, 0.1)'};
+  }
+`
+
+const Icon = styled.span`
+  font-size: 1.2rem;
+`
+
+// --- Constants ---
+
+const SCENARIOS = [
+  { id: 'Just Vibe', icon: '☕', label: 'Just Vibe (Free Talk)' },
+  { id: 'Coffee Run', icon: '🥤', label: 'Coffee Run' },
+  { id: 'Hustle', icon: '💼', label: 'Hustle (Work)' },
+  { id: 'Wanderlust', icon: '✈️', label: 'Wanderlust (Travel)' },
+  { id: 'Retail Therapy', icon: '🛍️', label: 'Retail Therapy' },
+  { id: 'Foodie', icon: '🍽️', label: 'Foodie (Dining)' },
+  { id: 'Gym Rat', icon: '🏋️', label: 'Gym Rat (Fitness)' },
+  { id: 'Tech Support', icon: '💻', label: 'Tech Support' },
+  { id: 'Movie Buff', icon: '🎬', label: 'Movie Buff' },
+  { id: 'Doctors Visit', icon: '🏥', label: 'Doctor\'s Visit' },
+]
+
+const DIFFICULTIES = [
+  { id: 'Beginner', label: 'Beginner (A1-A2)' },
+  { id: 'Intermediate', label: 'Intermediate (B1-B2)' },
+  { id: 'Advanced', label: 'Advanced (C1-C2)' },
+]
 
 // --- Main Component ---
 
@@ -338,16 +433,17 @@ export default function ConversationPage() {
   const [toastMsg, setToastMsg] = useState('')
   const [toastType, setToastType] = useState('info')
 
+  // Settings State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [scenario, setScenario] = useState('Just Vibe')
+  const [difficulty, setDifficulty] = useState('Intermediate')
+
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
 
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
-
-  const toggleTheme = () => {
-    setTheme(prev => prev.id === 'tech' ? auraTheme : techTheme)
-  }
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -461,11 +557,15 @@ export default function ConversationPage() {
     setInputText('')
 
     try {
-      // Call API
+      // Call API with scenario and difficulty settings
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages })
+        body: JSON.stringify({
+          messages: newMessages,
+          scenario: scenario,
+          difficulty: difficulty
+        })
       })
 
       const responseText = await response.text()
@@ -481,7 +581,6 @@ export default function ConversationPage() {
         throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
       }
 
-      // Check for soft error (200 OK but contains error info)
       if (data.error) {
         console.error('API Soft Error:', data)
         throw new Error(data.message || data.error)
@@ -489,7 +588,6 @@ export default function ConversationPage() {
 
       const fullReply = data.reply || "Sorry, I couldn't understand that."
 
-      // Parse separator |||
       const parts = fullReply.split('|||')
       let correction = null
       let conversation = fullReply
@@ -512,17 +610,26 @@ export default function ConversationPage() {
     }
   }
 
+  const handleScenarioChange = (newScenario) => {
+    setScenario(newScenario)
+    // Optional: Clear chat or notify user of change
+    showNotice(`Scenario changed to: ${newScenario}`, 'success')
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <PageContainer>
         <Header>
-          <IconButton onClick={() => navigate('/')}>
-            ←
-          </IconButton>
-          <Title>AI Talk</Title>
-          <IconButton onClick={toggleTheme} title="Switch Theme">
-            {theme.id === 'tech' ? '✨' : '🌙'}
-          </IconButton>
+          <IconButton onClick={() => navigate('/')}>←</IconButton>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Title>AI Talk</Title>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <ModeBadge>MODE: {scenario.toUpperCase()}</ModeBadge>
+            <IconButton onClick={() => setIsSettingsOpen(true)} title="Settings">
+              ⚙️
+            </IconButton>
+          </div>
         </Header>
 
         <ChatArea>
@@ -587,6 +694,63 @@ export default function ConversationPage() {
             </StatusText>
           </MicContainer>
         </Controls>
+
+        {/* Settings Sidebar */}
+        <SidebarOverlay isOpen={isSettingsOpen} onClick={() => setIsSettingsOpen(false)} />
+        <Sidebar isOpen={isSettingsOpen}>
+          <SidebarHeader>
+            <SidebarTitle>Settings</SidebarTitle>
+            <IconButton onClick={() => setIsSettingsOpen(false)}>✕</IconButton>
+          </SidebarHeader>
+
+          <Section>
+            <SectionTitle>VIBE CHECK (THEME)</SectionTitle>
+            <OptionGrid>
+              <OptionButton
+                active={theme.id === 'tech'}
+                onClick={() => setTheme(techTheme)}
+              >
+                <Icon>✨</Icon> Tech (Dark)
+              </OptionButton>
+              <OptionButton
+                active={theme.id === 'aura'}
+                onClick={() => setTheme(auraTheme)}
+              >
+                <Icon>☁️</Icon> Aura (Light)
+              </OptionButton>
+            </OptionGrid>
+          </Section>
+
+          <Section>
+            <SectionTitle>DIFFICULTY</SectionTitle>
+            <OptionGrid>
+              {DIFFICULTIES.map(diff => (
+                <OptionButton
+                  key={diff.id}
+                  active={difficulty === diff.id}
+                  onClick={() => setDifficulty(diff.id)}
+                >
+                  {diff.label}
+                </OptionButton>
+              ))}
+            </OptionGrid>
+          </Section>
+
+          <Section>
+            <SectionTitle>SCENARIO</SectionTitle>
+            <OptionGrid style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              {SCENARIOS.map(scen => (
+                <OptionButton
+                  key={scen.id}
+                  active={scenario === scen.id}
+                  onClick={() => handleScenarioChange(scen.id)}
+                >
+                  <Icon>{scen.icon}</Icon> {scen.label}
+                </OptionButton>
+              ))}
+            </OptionGrid>
+          </Section>
+        </Sidebar>
 
         <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
       </PageContainer>
