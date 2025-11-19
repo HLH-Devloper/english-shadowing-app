@@ -977,22 +977,48 @@ export default function ConversationPage() {
       setSpeakingMsgId(aiMsgId)
 
       setMessages(prev => [...prev, {
+      }])
+
+      speakText(conversation, aiMsgId)
+    } catch (error) {
+      console.error('Chat error:', error)
+
+      // --- LEVEL 3: Local Fallback ---
+      const localFallbacks = [
+        "I see. Could you tell me more about that?",
+        "That's interesting! Please go on.",
+        "I understand. What else would you like to say?",
+        "Could you explain that in a bit more detail?",
+        "Great! Let's keep practicing. What's next?"
+      ]
+      const randomReply = localFallbacks[Math.floor(Math.random() * localFallbacks.length)]
+
+      const aiMsgId = Date.now().toString() + '-ai-fallback'
+      setMessages(prev => [...prev, {
         id: aiMsgId,
         role: 'ai',
-        text: conversation,
-        correction: correction
+        text: randomReply
+      }])
+      speakText(randomReply, aiMsgId)
+
+      showNotice('网络连接不稳定，已切换至离线模式', 'warning')
+    }
+  }
+
+  const handleScenarioChange = (newScenario) => {
+    setScenario(newScenario)
     showNotice(`Scenario changed to: ${newScenario}`, 'success')
   }
 
   const handleDifficultyChange = (newDifficulty) => {
     setDifficulty(newDifficulty)
-    showNotice(`Difficulty set to: ${ newDifficulty }`, 'success')
+    showNotice(`Difficulty set to: ${newDifficulty}`, 'success')
   }
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    return `${ mins.toString().padStart(2, '0') }: ${ secs.toString().padStart(2, '0') }`
+    return `${mins.toString().padStart(2, '0')}: ${secs.toString().padStart(2, '0')}`
   }
 
   return (
