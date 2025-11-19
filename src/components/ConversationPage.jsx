@@ -55,10 +55,10 @@ const fadeIn = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `
 
-const pulse = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
-  70% { box-shadow: 0 0 0 20px rgba(236, 72, 153, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+const wave = keyframes`
+  0% { height: 10%; }
+  50% { height: 100%; }
+  100% { height: 10%; }
 `
 
 const dots = keyframes`
@@ -179,6 +179,7 @@ const Bubble = styled.div`
   line-height: 1.6;
   position: relative;
   box-shadow: ${props => props.theme.id === 'aura' && props.role === 'ai' ? '0 4px 15px rgba(0,0,0,0.05)' : 'none'};
+  overflow: hidden; /* For blur effect */
   
   ${props => props.role === 'user' ? css`
     background: ${props.theme.userBubble};
@@ -192,6 +193,21 @@ const Bubble = styled.div`
     border-bottom-left-radius: 4px;
     backdrop-filter: blur(10px);
   `}
+`
+
+const BlurOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
 `
 
 const RoleLabel = styled.span`
@@ -286,11 +302,67 @@ const SendButton = styled.button`
   &:active { transform: scale(0.98); }
 `
 
-const MicContainer = styled.div`
+// --- Recording Bar Components ---
+
+const RecordingBar = styled.div`
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  background: ${props => props.theme.id === 'tech' ? '#1e293b' : '#ffffff'};
+  padding: 16px 24px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  border: 1px solid ${props => props.theme.border};
+  animation: ${fadeIn} 0.3s ease;
+`
+
+const Waveform = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  flex: 1;
+  justify-content: center;
+  margin: 0 20px;
+`
+
+const WaveBar = styled.div`
+  width: 4px;
+  background: ${props => props.theme.accent};
+  border-radius: 2px;
+  animation: ${wave} 1s ease-in-out infinite;
+  animation-delay: ${props => props.delay}s;
+`
+
+const Timer = styled.span`
+  font-family: monospace;
+  font-size: 1rem;
+  color: ${props => props.theme.text};
+  margin-right: 16px;
+`
+
+const ActionButton = styled.button`
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.2rem;
+  
+  ${props => props.variant === 'cancel' ? css`
+    background: rgba(0,0,0,0.05);
+    color: ${props.theme.textSecondary};
+    &:hover { background: rgba(0,0,0,0.1); }
+  ` : css`
+    background: #22c55e; /* Green for send */
+    color: white;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    &:hover { transform: scale(1.05); }
+  `}
 `
 
 const MicButton = styled.button`
@@ -298,28 +370,29 @@ const MicButton = styled.button`
   height: 72px;
   border-radius: 50%;
   border: none;
-  background: ${props => props.isListening ? props.theme.micActive : props.theme.micInactive};
+  background: ${props => props.theme.micInactive};
   color: white;
   font-size: 28px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: ${props => props.isListening ? `0 0 0 4px ${props.theme.micActive}40` : props.theme.shadow};
+  box-shadow: ${props.theme.shadow};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
-  ${props => props.isListening && css`animation: ${pulse} 1.5s infinite;`}
-  
-  &:hover { transform: translateY(-2px) scale(1.05); }
-  &:active { transform: translateY(0) scale(0.95); }
+  &:hover {
+    transform: translateY(-2px) scale(1.05);
+  }
+  &:active {
+    transform: translateY(0) scale(0.95);
+  }
 `
 
-const StatusText = styled.span`
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: ${props => props.isListening ? props.theme.micActive : props.theme.textSecondary};
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+const MicContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 `
 
 // --- Settings Sidebar ---
@@ -438,10 +511,10 @@ export default function ConversationPage() {
   const navigate = useNavigate()
   const [theme, setTheme] = useState(techTheme)
   const [messages, setMessages] = useState([
-    { role: 'ai', text: "Hello! I'm your AI English tutor. What would you like to talk about today?" }
+    { id: 'init', role: 'ai', text: "Hello! I'm your AI English tutor. What would you like to talk about today?" }
   ])
   const [isListening, setIsListening] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
   const [inputText, setInputText] = useState('')
   const [toastMsg, setToastMsg] = useState('')
   const [toastType, setToastType] = useState('info')
@@ -452,16 +525,13 @@ export default function ConversationPage() {
   const [difficulty, setDifficulty] = useState('Intermediate')
   const [translatingIndices, setTranslatingIndices] = useState(new Set())
 
+  // Speaking State
+  const [speakingMsgId, setSpeakingMsgId] = useState(null)
+
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
-
-  // Ref to keep track of messages for event listeners
-  const messagesRef = useRef(messages)
-
-  useEffect(() => {
-    messagesRef.current = messages
-  }, [messages])
+  const timerRef = useRef(null)
 
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
@@ -471,34 +541,62 @@ export default function ConversationPage() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition()
-      recognition.continuous = false
-      recognition.interimResults = false
+      recognition.continuous = true // Keep listening until stopped
+      recognition.interimResults = true // Show results as you speak
       recognition.lang = 'en-US'
 
-      recognition.onstart = () => setIsListening(true)
-      recognition.onend = () => setIsListening(false)
+      recognition.onstart = () => {
+        setIsListening(true)
+        setRecordingTime(0)
+        timerRef.current = setInterval(() => {
+          setRecordingTime(prev => prev + 1)
+        }, 1000)
+      }
+
+      recognition.onend = () => {
+        // Only stop if explicitly requested or error, otherwise restart if continuous failed
+        // But here we manage state manually
+      }
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript
-        setInputText(transcript)
+        let interimTranscript = ''
+        let finalTranscript = ''
 
-        // Use messagesRef to get the latest messages
-        const currentMessages = messagesRef.current
-        const newMessages = [...currentMessages, { role: 'user', text: transcript }]
-        setMessages(newMessages)
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript
+          } else {
+            interimTranscript += event.results[i][0].transcript
+          }
+        }
 
-        sendMessageToApi(newMessages)
+        // Update input text with what we have so far
+        // Note: This simple logic appends. For a proper input box sync, we might need more complex logic
+        // But for now, replacing input text with the latest transcript chunk is standard for this UI
+        if (finalTranscript || interimTranscript) {
+          setInputText(prev => {
+            // If we want to append, we need to be careful not to duplicate
+            // For simplicity in this UI, we'll just show the current session's transcript
+            // A better way is to just setInputText(finalTranscript + interimTranscript) 
+            // but that requires clearing it on start.
+            return finalTranscript + interimTranscript
+          })
+        }
       }
 
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error)
-        setIsListening(false)
-        showNotice('Speech recognition failed. Please try again or type.', 'error')
+        stopRecording()
+        showNotice('Speech recognition failed. Please try again.', 'error')
       }
 
       recognitionRef.current = recognition
     } else {
       showNotice('Your browser does not support speech recognition.', 'warning')
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
     }
   }, [])
 
@@ -507,15 +605,28 @@ export default function ConversationPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current?.stop()
-    } else {
-      recognitionRef.current?.start()
-    }
+  const startRecording = () => {
+    setInputText('') // Clear input for new speech
+    recognitionRef.current?.start()
   }
 
-  const speakText = (text) => {
+  const stopRecording = () => {
+    setIsListening(false)
+    recognitionRef.current?.stop()
+    if (timerRef.current) clearInterval(timerRef.current)
+  }
+
+  const cancelRecording = () => {
+    stopRecording()
+    setInputText('')
+  }
+
+  const sendRecording = () => {
+    stopRecording()
+    handleSendMessage(inputText)
+  }
+
+  const speakText = (text, msgId) => {
     if (synthRef.current.speaking) {
       synthRef.current.cancel()
     }
@@ -525,9 +636,18 @@ export default function ConversationPage() {
 
     const utterance = new SpeechSynthesisUtterance(cleanText)
     utterance.lang = 'en-US'
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
+
+    utterance.onstart = () => {
+      setSpeakingMsgId(msgId)
+    }
+
+    utterance.onend = () => {
+      setSpeakingMsgId(null)
+    }
+
+    utterance.onerror = () => {
+      setSpeakingMsgId(null)
+    }
 
     synthRef.current.speak(utterance)
   }
@@ -535,7 +655,6 @@ export default function ConversationPage() {
   const handleTranslate = async (index, text) => {
     if (messages[index].translation || translatingIndices.has(index)) return
 
-    // Set loading state
     setTranslatingIndices(prev => new Set(prev).add(index))
 
     try {
@@ -577,7 +696,6 @@ export default function ConversationPage() {
       console.error('Translation error:', error)
       showNotice(`Translation failed: ${error.message}`, 'error')
     } finally {
-      // Clear loading state
       setTranslatingIndices(prev => {
         const next = new Set(prev)
         next.delete(index)
@@ -586,14 +704,19 @@ export default function ConversationPage() {
     }
   }
 
-  const sendMessageToApi = async (currentMessages) => {
+  const handleSendMessage = async (text) => {
+    if (!text.trim()) return
+
+    const newMessages = [...messages, { id: Date.now().toString(), role: 'user', text }]
+    setMessages(newMessages)
+    setInputText('')
+
     try {
-      // Call API with scenario and difficulty settings
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: currentMessages,
+          messages: newMessages,
           scenario: scenario,
           difficulty: difficulty
         })
@@ -628,32 +751,31 @@ export default function ConversationPage() {
         conversation = parts[1].trim()
       }
 
+      const aiMsgId = Date.now().toString() + '-ai'
+
       setMessages(prev => [...prev, {
+        id: aiMsgId,
         role: 'ai',
         text: conversation,
         correction: correction
       }])
 
-      speakText(conversation)
+      speakText(conversation, aiMsgId)
     } catch (error) {
       console.error('Chat error:', error)
       showNotice(`AI Error: ${error.message}`, 'error')
     }
   }
 
-  const handleSendMessage = async (text) => {
-    if (!text.trim()) return
-
-    const newMessages = [...messages, { role: 'user', text }]
-    setMessages(newMessages)
-    setInputText('')
-
-    sendMessageToApi(newMessages)
-  }
-
   const handleScenarioChange = (newScenario) => {
     setScenario(newScenario)
     showNotice(`Scenario changed to: ${newScenario}`, 'success')
+  }
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
   return (
@@ -685,6 +807,13 @@ export default function ConversationPage() {
               )}
 
               <Bubble role={msg.role}>
+                {/* Blur Overlay for AI messages being spoken */}
+                {msg.role === 'ai' && speakingMsgId === msg.id && (
+                  <BlurOverlay>
+                    <LoadingDots style={{ color: '#fff', fontWeight: 'bold' }}>Speaking</LoadingDots>
+                  </BlurOverlay>
+                )}
+
                 {msg.text}
                 {msg.role === 'ai' && (
                   <>
@@ -712,31 +841,43 @@ export default function ConversationPage() {
         </ChatArea>
 
         <Controls>
-          <InputGroup>
-            <Input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
-              placeholder="Type a message..."
-            />
-            <SendButton onClick={() => handleSendMessage(inputText)}>
-              Send
-            </SendButton>
-          </InputGroup>
+          {isListening ? (
+            <RecordingBar>
+              <ActionButton variant="cancel" onClick={cancelRecording}>✕</ActionButton>
+              <Waveform>
+                {[0, 0.2, 0.4, 0.1, 0.3, 0.5, 0.2].map((d, i) => (
+                  <WaveBar key={i} delay={d} />
+                ))}
+              </Waveform>
+              <Timer>{formatTime(recordingTime)}</Timer>
+              <ActionButton onClick={sendRecording}>➜</ActionButton>
+            </RecordingBar>
+          ) : (
+            <>
+              <InputGroup>
+                <Input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
+                  placeholder="Type a message..."
+                />
+                <SendButton onClick={() => handleSendMessage(inputText)}>
+                  Send
+                </SendButton>
+              </InputGroup>
 
-          <MicContainer>
-            <MicButton
-              isListening={isListening}
-              onClick={toggleListening}
-              aria-label={isListening ? "Stop listening" : "Start listening"}
-            >
-              {isListening ? '⏹' : '🎤'}
-            </MicButton>
-            <StatusText isListening={isListening}>
-              {isListening ? 'Listening...' : 'Tap to Speak'}
-            </StatusText>
-          </MicContainer>
+              <MicContainer>
+                <MicButton
+                  onClick={startRecording}
+                  aria-label="Start listening"
+                >
+                  🎤
+                </MicButton>
+                <StatusText>Tap to Speak</StatusText>
+              </MicContainer>
+            </>
+          )}
         </Controls>
 
         {/* Settings Sidebar */}
