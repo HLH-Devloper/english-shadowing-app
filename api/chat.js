@@ -30,6 +30,9 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Invalid or empty messages array' });
         }
 
+        // Debug logging
+        console.log('Received messages count:', messages.length);
+
         // Debug: Check environment variables (masked)
         const geminiKey = process.env.GEMINI_API_KEY;
         const googleKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -57,26 +60,31 @@ export default async function handler(req, res) {
         let text = '';
         const triedModels = [];
 
-        // Construct history for Gemini
-        // Filter out empty messages to prevent API errors
-        let history = messages.slice(0, -1)
-            .filter(msg => msg.text && msg.text.trim() !== '')
-            .map(msg => ({
-                role: msg.role === 'ai' ? 'model' : 'user',
-                parts: [{ text: msg.text }]
-            }));
-
-        // Gemini requires the first message in history to be from 'user'
-        while (history.length > 0 && history[0].role === 'model') {
-            history.shift();
-        }
-
-        const lastMessage = messages[messages.length - 1].text;
+        const lastMessageText = messages[messages.length - 1].text;
 
         // Check if this is a translation request
-        const isTranslation = lastMessage.startsWith('Translate this English text to Chinese');
+        const isTranslation = lastMessageText && lastMessageText.startsWith('Translate this English text to Chinese');
 
-        if (!isTranslation) {
+        let history = [];
+
+        if (isTranslation) {
+            // For translation, we don't need history, and we definitely don't want system prompt
+            history = [];
+            console.log('Handling translation request');
+        } else {
+            // Construct history for Gemini
+            history = messages.slice(0, -1)
+                .filter(msg => msg.text && msg.text.trim() !== '')
+                .map(msg => ({
+                    role: msg.role === 'ai' ? 'model' : 'user',
+                    parts: [{ text: msg.text }]
+                }));
+
+            // Gemini requires the first message in history to be from 'user'
+            while (history.length > 0 && history[0].role === 'model') {
+                history.shift();
+            }
+
             const systemPrompt = `You are a helpful and encouraging English language tutor for a Chinese student.
 Your goal is to help the user practice spoken English.
 
@@ -109,6 +117,13 @@ RULES:
             history = [...systemHistory, ...history];
         }
 
+        // Final validation of history to prevent "Each Content should have at least one part"
+        history = history.filter(item => item.parts && item.parts.length > 0 && item.parts[0].text);
+
+        if (!lastMessageText || lastMessageText.trim() === '') {
+            throw new Error('Last message text is empty');
+        }
+
         for (const modelName of candidateModels) {
             triedModels.push(modelName);
             try {
@@ -118,7 +133,7 @@ RULES:
                     generationConfig: { maxOutputTokens: 500 },
                 });
 
-                const result = await chat.sendMessage(lastMessage);
+                const result = await chat.sendMessage(lastMessageText);
                 const response = await result.response;
                 text = response.text();
 
@@ -137,7 +152,6 @@ RULES:
 
     } catch (error) {
         console.error('Server Error:', error);
-        // Return 200 with error info so frontend can display it instead of generic 500
         res.status(200).json({
             error: 'Server Error',
             message: error.message,
