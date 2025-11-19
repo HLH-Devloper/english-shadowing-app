@@ -61,6 +61,12 @@ const pulse = keyframes`
   100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
 `
 
+const dots = keyframes`
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+`
+
 const PageContainer = styled.div`
   height: 100vh;
   display: flex;
@@ -224,6 +230,13 @@ const TranslateBtn = styled.button`
   &:hover { opacity: 1; text-decoration: underline; }
 `
 
+const LoadingDots = styled.span`
+  &::after {
+    content: '.';
+    animation: ${dots} 1.5s steps(5, end) infinite;
+  }
+`
+
 const Controls = styled.div`
   padding: 24px;
   background: ${props => props.theme.headerBg};
@@ -329,7 +342,7 @@ const Sidebar = styled.div`
   top: 0;
   right: 0;
   bottom: 0;
-  width: 280px; /* Reduced width slightly */
+  width: 280px;
   background: ${props => props.theme.sidebarBg};
   backdrop-filter: blur(20px);
   z-index: 100;
@@ -338,7 +351,7 @@ const Sidebar = styled.div`
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  padding: 20px; /* Reduced padding */
+  padding: 20px;
   border-left: 1px solid ${props => props.theme.border};
 `
 
@@ -346,27 +359,27 @@ const SidebarHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px; /* Reduced margin */
+  margin-bottom: 24px;
 `
 
 const SidebarTitle = styled.h2`
-  font-size: 1rem; /* Reduced from 1.2rem */
+  font-size: 1rem;
   font-weight: 700;
   margin: 0;
   color: ${props => props.theme.text};
 `
 
 const SectionTitle = styled.h3`
-  font-size: 0.7rem; /* Reduced from 0.75rem */
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   color: ${props => props.theme.textSecondary};
-  margin: 0 0 10px 0; /* Reduced margin */
+  margin: 0 0 10px 0;
   letter-spacing: 1px;
 `
 
 const Section = styled.div`
-  margin-bottom: 24px; /* Reduced margin */
+  margin-bottom: 24px;
 `
 
 const OptionGrid = styled.div`
@@ -379,14 +392,14 @@ const OptionButton = styled.button`
   background: ${props => props.active ? props.theme.accent : 'rgba(255, 255, 255, 0.05)'};
   color: ${props => props.active ? '#fff' : props.theme.text};
   border: 1px solid ${props => props.active ? props.theme.accent : props.theme.border};
-  padding: 10px 14px; /* Reduced padding */
-  border-radius: 10px; /* Slightly smaller radius */
+  padding: 10px 14px;
+  border-radius: 10px;
   cursor: pointer;
   text-align: left;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.85rem; /* Reduced from 0.95rem */
+  font-size: 0.85rem;
   transition: all 0.2s;
 
   &:hover {
@@ -395,7 +408,7 @@ const OptionButton = styled.button`
 `
 
 const Icon = styled.span`
-  font-size: 1rem; /* Reduced from 1.2rem */
+  font-size: 1rem;
 `
 
 // --- Constants ---
@@ -437,10 +450,18 @@ export default function ConversationPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [scenario, setScenario] = useState('Just Vibe')
   const [difficulty, setDifficulty] = useState('Intermediate')
+  const [translatingIndices, setTranslatingIndices] = useState(new Set())
 
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
+
+  // Ref to keep track of messages for event listeners
+  const messagesRef = useRef(messages)
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
 
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
@@ -460,7 +481,13 @@ export default function ConversationPage() {
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript
         setInputText(transcript)
-        handleSendMessage(transcript)
+
+        // Use messagesRef to get the latest messages
+        const currentMessages = messagesRef.current
+        const newMessages = [...currentMessages, { role: 'user', text: transcript }]
+        setMessages(newMessages)
+
+        sendMessageToApi(newMessages)
       }
 
       recognition.onerror = (event) => {
@@ -506,7 +533,10 @@ export default function ConversationPage() {
   }
 
   const handleTranslate = async (index, text) => {
-    if (messages[index].translation) return
+    if (messages[index].translation || translatingIndices.has(index)) return
+
+    // Set loading state
+    setTranslatingIndices(prev => new Set(prev).add(index))
 
     try {
       const response = await fetch('/api/chat', {
@@ -546,23 +576,24 @@ export default function ConversationPage() {
     } catch (error) {
       console.error('Translation error:', error)
       showNotice(`Translation failed: ${error.message}`, 'error')
+    } finally {
+      // Clear loading state
+      setTranslatingIndices(prev => {
+        const next = new Set(prev)
+        next.delete(index)
+        return next
+      })
     }
   }
 
-  const handleSendMessage = async (text) => {
-    if (!text.trim()) return
-
-    const newMessages = [...messages, { role: 'user', text }]
-    setMessages(newMessages)
-    setInputText('')
-
+  const sendMessageToApi = async (currentMessages) => {
     try {
       // Call API with scenario and difficulty settings
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: newMessages,
+          messages: currentMessages,
           scenario: scenario,
           difficulty: difficulty
         })
@@ -610,9 +641,18 @@ export default function ConversationPage() {
     }
   }
 
+  const handleSendMessage = async (text) => {
+    if (!text.trim()) return
+
+    const newMessages = [...messages, { role: 'user', text }]
+    setMessages(newMessages)
+    setInputText('')
+
+    sendMessageToApi(newMessages)
+  }
+
   const handleScenarioChange = (newScenario) => {
     setScenario(newScenario)
-    // Optional: Clear chat or notify user of change
     showNotice(`Scenario changed to: ${newScenario}`, 'success')
   }
 
@@ -656,7 +696,11 @@ export default function ConversationPage() {
                     )}
                     {!msg.translation && (
                       <TranslateBtn onClick={() => handleTranslate(index, msg.text)}>
-                        文/A Translate
+                        {translatingIndices.has(index) ? (
+                          <span>Translating<LoadingDots /></span>
+                        ) : (
+                          '文/A Translate'
+                        )}
                       </TranslateBtn>
                     )}
                   </>
