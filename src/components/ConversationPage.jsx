@@ -703,6 +703,19 @@ export default function ConversationPage() {
   const [toastMsg, setToastMsg] = useState('')
   const [toastType, setToastType] = useState('info')
 
+  // Settings State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [scenario, setScenario] = useState('Just Vibe')
+  const [difficulty, setDifficulty] = useState('Intermediate')
+  const [translatingIndices, setTranslatingIndices] = useState(new Set())
+  const [suggestions, setSuggestions] = useState([])
+
+  // Speaking State
+  const [speakingMsgId, setSpeakingMsgId] = useState(null)
+
+  // Membership State
+  const [isMember, setIsMember] = useState(null) // null = loading, false = not member, true = member
+
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
