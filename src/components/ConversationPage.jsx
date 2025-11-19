@@ -1,8 +1,239 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import styled, { keyframes, css } from 'styled-components'
 import BrandDuck from './BrandDuck'
 import Toast from './Toast'
-import '../mobile.css' // Reuse mobile styles if needed, or create new ones
+
+// --- Styled Components & Animations ---
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`
+
+const pulse = keyframes`
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+`
+
+const PageContainer = styled.div`
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #0f172a; /* Slate 900 - Deep Tech Dark */
+  color: #f8fafc;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+`
+
+const Header = styled.header`
+  padding: 16px 24px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+`
+
+const BackButton = styled.button`
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.2rem;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(-2px);
+  }
+`
+
+const Title = styled.h1`
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(to right, #38bdf8, #818cf8); /* Sky to Indigo */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  text-transform: uppercase;
+`
+
+const ChatArea = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  scroll-behavior: smooth;
+  
+  /* Custom Scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+  }
+`
+
+const BubbleWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: ${props => props.role === 'user' ? 'flex-end' : 'flex-start'};
+  animation: ${fadeIn} 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  max-width: 85%;
+`
+
+const Bubble = styled.div`
+  padding: 16px 20px;
+  border-radius: 20px;
+  font-size: 1rem;
+  line-height: 1.6;
+  position: relative;
+  
+  ${props => props.role === 'user' ? css`
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); /* Blue to Indigo */
+    color: white;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+  ` : css`
+    background: rgba(30, 41, 59, 0.7); /* Slate 800 transparent */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    border-bottom-left-radius: 4px;
+    backdrop-filter: blur(10px);
+  `}
+`
+
+const RoleLabel = styled.span`
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 6px;
+  margin-left: ${props => props.role === 'user' ? '0' : '12px'};
+  margin-right: ${props => props.role === 'user' ? '12px' : '0'};
+`
+
+const Controls = styled.div`
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+`
+
+const InputGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  background: rgba(30, 41, 59, 0.6);
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.2s;
+
+  &:focus-within {
+    border-color: rgba(56, 189, 248, 0.5);
+  }
+`
+
+const Input = styled.input`
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 10px 16px;
+  font-size: 1rem;
+  outline: none;
+  
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
+`
+
+const SendButton = styled.button`
+  background: #38bdf8; /* Sky 400 */
+  color: #0f172a;
+  border: none;
+  border-radius: 12px;
+  padding: 0 24px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: #7dd3fc;
+    transform: scale(1.02);
+  }
+  &:active {
+    transform: scale(0.98);
+  }
+`
+
+const MicContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+`
+
+const MicButton = styled.button`
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: none;
+  background: ${props => props.isListening ? '#ef4444' : 'linear-gradient(135deg, #0ea5e9, #6366f1)'};
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: ${props => props.isListening
+    ? '0 0 0 4px rgba(239, 68, 68, 0.2)'
+    : '0 10px 30px rgba(99, 102, 241, 0.4)'};
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  ${props => props.isListening && css`
+    animation: ${pulse} 1.5s infinite;
+  `}
+  
+  &:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 15px 40px rgba(99, 102, 241, 0.5);
+  }
+  &:active {
+    transform: translateY(0) scale(0.95);
+  }
+`
+
+const StatusText = styled.span`
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: ${props => props.isListening ? '#ef4444' : 'rgba(255, 255, 255, 0.5)'};
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+`
+
+// --- Main Component ---
 
 export default function ConversationPage() {
   const navigate = useNavigate()
@@ -114,124 +345,61 @@ export default function ConversationPage() {
       speakText(aiText)
     } catch (error) {
       console.error('Chat error:', error)
-      showNotice('Failed to get AI response.', 'error')
+      showNotice(`AI Error: ${error.message}`, 'error')
     }
   }
 
   return (
-    <div className="conversation-page" style={{
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: 'var(--bg)',
-      color: 'var(--text)'
-    }}>
-      {/* Header */}
-      <header style={{
-        padding: '16px',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>←</button>
-          <div className="brand">
-            <span className="brand-title">AI Talk</span>
-          </div>
-        </div>
-      </header>
+    <PageContainer>
+      <Header>
+        <BackButton onClick={() => navigate('/')}>
+          ←
+        </BackButton>
+        <Title>AI Talk</Title>
+        <div style={{ width: 40 }} /> {/* Spacer for balance */}
+      </Header>
 
-      {/* Chat Area */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '20px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
+      <ChatArea>
         {messages.map((msg, index) => (
-          <div key={index} style={{
-            alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-            maxWidth: '80%',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            background: msg.role === 'user' ? 'var(--primary)' : 'var(--card)',
-            color: msg.role === 'user' ? '#fff' : 'var(--text)',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            {msg.text}
-          </div>
+          <BubbleWrapper key={index} role={msg.role}>
+            <RoleLabel role={msg.role}>{msg.role === 'ai' ? 'AI Tutor' : 'You'}</RoleLabel>
+            <Bubble role={msg.role}>
+              {msg.text}
+            </Bubble>
+          </BubbleWrapper>
         ))}
         <div ref={messagesEndRef} />
-      </div>
+      </ChatArea>
 
-      {/* Controls */}
-      <div style={{
-        padding: '20px',
-        borderTop: '1px solid var(--border)',
-        background: 'var(--card)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px'
-      }}>
-        {/* Text Input Fallback */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
+      <Controls>
+        <InputGroup>
+          <Input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
-            placeholder="Type or speak..."
-            style={{
-              flex: 1,
-              padding: '10px',
-              borderRadius: '8px',
-              border: '1px solid var(--border)',
-              background: 'var(--bg)',
-              color: 'var(--text)'
-            }}
+            placeholder="Type a message..."
           />
-          <button
-            onClick={() => handleSendMessage(inputText)}
-            style={{
-              padding: '0 20px',
-              borderRadius: '8px',
-              background: 'var(--primary)',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-          >Send</button>
-        </div>
+          <SendButton onClick={() => handleSendMessage(inputText)}>
+            Send
+          </SendButton>
+        </InputGroup>
 
-        {/* Mic Button */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button
+        <MicContainer>
+          <MicButton
+            isListening={isListening}
             onClick={toggleListening}
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: isListening ? '#ef4444' : 'var(--primary)',
-              color: '#fff',
-              border: 'none',
-              fontSize: '24px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-              transition: 'all 0.2s'
-            }}
+            aria-label={isListening ? "Stop listening" : "Start listening"}
           >
             {isListening ? '⏹' : '🎤'}
-          </button>
-        </div>
-        <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--muted)' }}>
-          {isListening ? 'Listening...' : 'Tap to Speak'}
-        </div>
-      </div>
+          </MicButton>
+          <StatusText isListening={isListening}>
+            {isListening ? 'Listening...' : 'Tap to Speak'}
+          </StatusText>
+        </MicContainer>
+      </Controls>
 
       <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
-    </div>
+    </PageContainer>
   )
 }
