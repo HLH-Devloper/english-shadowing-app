@@ -117,7 +117,12 @@ RULES:
    - Do NOT mention the mistake here.
 3. If the user speaks Chinese:
    - Reply in English (Response Section) and encourage them to speak English.
-4. Do NOT output ||| if there is no correction.`;
+4. Do NOT output ||| if there is no correction.
+
+FINAL STEP:
+At the very end of your response, generate 3 short, natural follow-up responses that the user might say next.
+- Based on the current context and difficulty level.
+- Format: ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"]`;
 
         // Debug: Check environment variables (masked)
         const geminiKey = process.env.GEMINI_API_KEY;
