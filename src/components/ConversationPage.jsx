@@ -14,6 +14,8 @@ const techTheme = {
   cardBg: 'rgba(30, 41, 59, 0.7)',
   userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
   aiBubble: 'rgba(30, 41, 59, 0.7)',
+  correctionBg: 'rgba(239, 68, 68, 0.15)', // Red tint for correction
+  correctionBorder: 'rgba(239, 68, 68, 0.3)',
   accent: '#38bdf8',
   micActive: '#ef4444',
   micInactive: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
@@ -33,6 +35,8 @@ const auraTheme = {
   cardBg: 'rgba(255, 255, 255, 0.8)',
   userBubble: 'linear-gradient(135deg, #c084fc 0%, #a855f7 100%)', // Purple gradient
   aiBubble: '#ffffff',
+  correctionBg: 'rgba(254, 202, 202, 0.3)', // Pastel red
+  correctionBorder: 'rgba(252, 165, 165, 0.5)',
   accent: '#a855f7',
   micActive: '#ec4899', // Pink
   micInactive: 'linear-gradient(135deg, #d8b4fe, #f472b6)', // Pastel purple/pink
@@ -141,6 +145,19 @@ const BubbleWrapper = styled.div`
   align-items: ${props => props.role === 'user' ? 'flex-end' : 'flex-start'};
   animation: ${fadeIn} 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   max-width: 85%;
+`
+
+const CorrectionBubble = styled.div`
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background: ${props => props.theme.correctionBg};
+  border: 1px solid ${props => props.theme.correctionBorder};
+  color: ${props => props.theme.text};
+  margin-bottom: 8px;
+  border-bottom-left-radius: 4px;
+  backdrop-filter: blur(10px);
 `
 
 const Bubble = styled.div`
@@ -454,10 +471,25 @@ export default function ConversationPage() {
         throw new Error(data.message || data.error)
       }
 
-      const aiText = data.reply || "Sorry, I couldn't understand that."
+      const fullReply = data.reply || "Sorry, I couldn't understand that."
 
-      setMessages(prev => [...prev, { role: 'ai', text: aiText }])
-      speakText(aiText)
+      // Parse separator |||
+      const parts = fullReply.split('|||')
+      let correction = null
+      let conversation = fullReply
+
+      if (parts.length > 1) {
+        correction = parts[0].trim()
+        conversation = parts[1].trim()
+      }
+
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        text: conversation,
+        correction: correction
+      }])
+
+      speakText(conversation)
     } catch (error) {
       console.error('Chat error:', error)
       showNotice(`AI Error: ${error.message}`, 'error')
@@ -481,6 +513,14 @@ export default function ConversationPage() {
           {messages.map((msg, index) => (
             <BubbleWrapper key={index} role={msg.role}>
               <RoleLabel role={msg.role}>{msg.role === 'ai' ? 'AI Tutor' : 'You'}</RoleLabel>
+
+              {msg.correction && (
+                <CorrectionBubble>
+                  <strong>💡 Correction:</strong><br />
+                  {msg.correction}
+                </CorrectionBubble>
+              )}
+
               <Bubble role={msg.role}>
                 {msg.text}
                 {msg.role === 'ai' && (

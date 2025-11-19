@@ -58,7 +58,9 @@ export default async function handler(req, res) {
             .filter(msg => msg.text && msg.text.trim() !== '') // Filter out empty messages
             .map(msg => ({
                 role: msg.role === 'ai' ? 'model' : 'user',
-                parts: [{ text: msg.text }]
+                parts: [{ text: msg.text }] // Note: We send the full text (conversation) to history. Correction is stripped in frontend but maybe we should keep context? 
+                // Actually, for context, it's better if the AI sees its previous full response including correction, or just conversation?
+                // If we strip correction in frontend, 'msg.text' only has conversation. That's good for context.
             }));
 
         // Gemini requires the first message in history to be from 'user'
@@ -75,20 +77,31 @@ export default async function handler(req, res) {
         if (!isTranslation) {
             const systemPrompt = `You are a helpful and encouraging English language tutor for a Chinese student.
 Your goal is to help the user practice spoken English.
-Rules:
-1. IF the user makes a mistake (grammar, spelling, or expression):
-   - FIRST, point out the mistake and explain it using a mix of Chinese and English (e.g., "You said '...' but it's better to say '...' because...").
-   - THEN, provide the correct English expression.
-   - FINALLY, continue the conversation in English.
-2. IF the user's English is correct:
-   - Simply reply in English to continue the conversation.
-3. IF the user speaks Chinese:
-   - Reply in English and encourage them to try saying it in English.
-4. Keep your responses concise and conversational.`;
+
+RESPONSE FORMAT:
+If the user makes a mistake (grammar, spelling, unnatural expression):
+[Correction explanation in Chinese]|||[Conversational Response in English]
+
+If the user's English is correct:
+[Conversational Response in English]
+
+RULES:
+1. CORRECTION SECTION (before |||):
+   - Use Chinese primarily to explain the mistake.
+   - Provide the corrected English sentence.
+   - Example: "你用了 'traval'，正确的拼写是 'travel'。你可以说：I want to travel."
+2. RESPONSE SECTION (after ||| or if no mistake):
+   - Pure English.
+   - Continue the conversation naturally.
+   - Do NOT mention the mistake here.
+3. If the user speaks Chinese:
+   - Reply in English (Response Section) and encourage them to speak English.
+   - You can add a Chinese tip in the Correction Section if needed.
+4. Do NOT output ||| if there is no correction.`;
 
             const systemHistory = [
                 { role: 'user', parts: [{ text: systemPrompt }] },
-                { role: 'model', parts: [{ text: "Understood. I will act as your English tutor. I will correct mistakes using Chinese/English explanations, but keep the main conversation in English." }] }
+                { role: 'model', parts: [{ text: "Understood. I will use the '|||' separator to distinguish between Chinese corrections and English conversational responses." }] }
             ];
             // Prepend system prompt to history
             history = [...systemHistory, ...history];
@@ -100,7 +113,7 @@ Rules:
                 const model = genAI.getGenerativeModel({ model: modelName });
                 const chat = model.startChat({
                     history: history,
-                    generationConfig: { maxOutputTokens: 400 }, // Increased token limit for corrections
+                    generationConfig: { maxOutputTokens: 500 }, // Increased token limit
                 });
 
                 const result = await chat.sendMessage(lastMessage);
