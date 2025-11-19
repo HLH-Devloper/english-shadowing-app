@@ -13,21 +13,6 @@ const techTheme = {
   headerBg: 'rgba(15, 23, 42, 0.85)',
   cardBg: 'rgba(30, 41, 59, 0.7)',
   userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
-  import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import styled, { keyframes, css, ThemeProvider } from 'styled-components'
-import Toast from './Toast'
-
-// --- Themes ---
-
-const techTheme = {
-  id: 'tech',
-  bg: '#0f172a',
-  text: '#f8fafc',
-  textSecondary: 'rgba(255, 255, 255, 0.5)',
-  headerBg: 'rgba(15, 23, 42, 0.85)',
-  cardBg: 'rgba(30, 41, 59, 0.7)',
-  userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
   aiBubble: 'rgba(30, 41, 59, 0.7)',
   accent: '#38bdf8',
   micActive: '#ef4444',
