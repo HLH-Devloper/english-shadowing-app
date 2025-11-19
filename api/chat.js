@@ -19,6 +19,8 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    let debugHistory = [];
+
     try {
         if (!req.body) {
             return res.status(400).json({ error: 'Missing request body' });
@@ -29,9 +31,6 @@ export default async function handler(req, res) {
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
             return res.status(400).json({ error: 'Invalid or empty messages array' });
         }
-
-        // Debug logging
-        console.log('Received messages count:', messages.length);
 
         // Debug: Check environment variables (masked)
         const geminiKey = process.env.GEMINI_API_KEY;
@@ -68,22 +67,48 @@ export default async function handler(req, res) {
         let history = [];
 
         if (isTranslation) {
-            // For translation, we don't need history, and we definitely don't want system prompt
+            // For translation, strictly empty history
             history = [];
-            console.log('Handling translation request');
         } else {
-            // Construct history for Gemini
-            history = messages.slice(0, -1)
-                .filter(msg => msg.text && msg.text.trim() !== '')
+            // 1. Initial Map & Filter
+            let rawHistory = messages.slice(0, -1)
                 .map(msg => ({
                     role: msg.role === 'ai' ? 'model' : 'user',
-                    parts: [{ text: msg.text }]
-                }));
+                    text: msg.text ? String(msg.text).trim() : ''
+                }))
+                .filter(msg => msg.text !== ''); // Remove empty messages
 
-            // Gemini requires the first message in history to be from 'user'
-            while (history.length > 0 && history[0].role === 'model') {
-                history.shift();
+            // 2. Merge Consecutive Roles
+            // Gemini requires strict User -> Model -> User alternation
+            if (rawHistory.length > 0) {
+                let mergedHistory = [];
+                let currentMsg = rawHistory[0];
+
+                for (let i = 1; i < rawHistory.length; i++) {
+                    const nextMsg = rawHistory[i];
+                    if (nextMsg.role === currentMsg.role) {
+                        // Merge text with newline
+                        currentMsg.text += '\n' + nextMsg.text;
+                    } else {
+                        mergedHistory.push(currentMsg);
+                        currentMsg = nextMsg;
+                    }
+                }
+                mergedHistory.push(currentMsg);
+                rawHistory = mergedHistory;
             }
+
+            // 3. Ensure Start with User
+            // If first message is model, remove it
+            while (rawHistory.length > 0 && rawHistory[0].role === 'model') {
+                rawHistory.shift();
+            }
+
+            // 4. Convert to Gemini Format
+            history = rawHistory.map(msg => ({
+                role: msg.role,
+                parts: [{ text: msg.text }]
+            }));
 
             const systemPrompt = `You are a helpful and encouraging English language tutor for a Chinese student.
 Your goal is to help the user practice spoken English.
@@ -113,12 +138,15 @@ RULES:
                 { role: 'user', parts: [{ text: systemPrompt }] },
                 { role: 'model', parts: [{ text: "Understood. I will use the '|||' separator to distinguish between Chinese corrections and English conversational responses." }] }
             ];
-            // Prepend system prompt to history
+
+            // Prepend system prompt
+            // Note: systemHistory ends with 'model'.
+            // If 'history' (user conversation) starts with 'user', we are good.
+            // If 'history' is empty, we are also good (lastMessage is user).
             history = [...systemHistory, ...history];
         }
 
-        // Final validation of history to prevent "Each Content should have at least one part"
-        history = history.filter(item => item.parts && item.parts.length > 0 && item.parts[0].text);
+        debugHistory = history; // Save for error reporting
 
         if (!lastMessageText || lastMessageText.trim() === '') {
             throw new Error('Last message text is empty');
@@ -159,7 +187,8 @@ RULES:
             debug: {
                 hasKey: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
                 nodeVersion: process.version,
-                historyLength: req.body?.messages?.length
+                historyLength: debugHistory.length,
+                historyPreview: debugHistory.slice(-3) // Show last 3 messages in debug
             }
         });
     }
