@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
-    // Set CORS headers to allow requests from any origin (or restrict to your domain)
+    // Set CORS headers
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -20,10 +20,14 @@ export default async function handler(req, res) {
     }
 
     try {
+        if (!req.body) {
+            return res.status(400).json({ error: 'Missing request body' });
+        }
+
         const { messages } = req.body;
 
-        if (!messages || !Array.isArray(messages)) {
-            return res.status(400).json({ error: 'Invalid messages format' });
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: 'Invalid or empty messages array' });
         }
 
         // Debug: Check environment variables (masked)
@@ -32,7 +36,7 @@ export default async function handler(req, res) {
         const hasKey = !!(geminiKey || googleKey);
 
         if (!hasKey) {
-            throw new Error('API Key not found in environment variables (GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY)');
+            throw new Error('API Key not found in environment variables');
         }
 
         const apiKey = geminiKey || googleKey;
@@ -54,24 +58,22 @@ export default async function handler(req, res) {
         const triedModels = [];
 
         // Construct history for Gemini
+        // Filter out empty messages to prevent API errors
         let history = messages.slice(0, -1)
-            .filter(msg => msg.text && msg.text.trim() !== '') // Filter out empty messages
+            .filter(msg => msg.text && msg.text.trim() !== '')
             .map(msg => ({
                 role: msg.role === 'ai' ? 'model' : 'user',
-                parts: [{ text: msg.text }] // Note: We send the full text (conversation) to history. Correction is stripped in frontend but maybe we should keep context? 
-                // Actually, for context, it's better if the AI sees its previous full response including correction, or just conversation?
-                // If we strip correction in frontend, 'msg.text' only has conversation. That's good for context.
+                parts: [{ text: msg.text }]
             }));
 
         // Gemini requires the first message in history to be from 'user'
-        // If the history starts with a 'model' message (e.g. the initial greeting), remove it.
         while (history.length > 0 && history[0].role === 'model') {
             history.shift();
         }
 
         const lastMessage = messages[messages.length - 1].text;
 
-        // Check if this is a translation request (from the "Translate" button)
+        // Check if this is a translation request
         const isTranslation = lastMessage.startsWith('Translate this English text to Chinese');
 
         if (!isTranslation) {
@@ -113,7 +115,7 @@ RULES:
                 const model = genAI.getGenerativeModel({ model: modelName });
                 const chat = model.startChat({
                     history: history,
-                    generationConfig: { maxOutputTokens: 500 }, // Increased token limit
+                    generationConfig: { maxOutputTokens: 500 },
                 });
 
                 const result = await chat.sendMessage(lastMessage);
@@ -143,8 +145,7 @@ RULES:
             debug: {
                 hasKey: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
                 nodeVersion: process.version,
-                historyLength: messages?.length,
-                isTranslation: messages?.[messages.length - 1]?.text?.startsWith('Translate this English text to Chinese')
+                historyLength: req.body?.messages?.length
             }
         });
     }

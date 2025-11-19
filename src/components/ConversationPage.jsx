@@ -423,7 +423,18 @@ export default function ConversationPage() {
         })
       })
 
-      const data = await response.json()
+      const responseText = await response.text()
+
+      if (!response.ok) {
+        throw new Error(`Server Error (${response.status}): ${responseText.slice(0, 100)}`)
+      }
+
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
+      }
 
       if (data.error) {
         throw new Error(data.message || data.error)
@@ -457,13 +468,18 @@ export default function ConversationPage() {
         body: JSON.stringify({ messages: newMessages })
       })
 
+      const responseText = await response.text()
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('API Error Details:', errorData)
-        throw new Error(errorData.details || errorData.error || 'API request failed')
+        throw new Error(`Server Error (${response.status}): ${responseText.slice(0, 100)}`)
       }
 
-      const data = await response.json()
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
+      }
 
       // Check for soft error (200 OK but contains error info)
       if (data.error) {
