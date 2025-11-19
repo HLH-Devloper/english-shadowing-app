@@ -29,7 +29,15 @@ export default function SpeakingChatPanel({ sentence, getMessages, onSend, onCle
   }
   return (
     <div className="speaking-chat-root">
-
+      {/* 当前句子卡片 */}
+      {sentence?.id && (
+        <div className="chat-sentence-card">
+          <div className="sentence-original">{sentence.original || sentence.text || ''}</div>
+          {sentence.translation && (
+            <div className="sentence-translation">{sentence.translation}</div>
+          )}
+        </div>
+      )}
 
       <div className="chat-body">
         {messages.map((m, idx) => (
