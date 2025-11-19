@@ -977,6 +977,10 @@ export default function ConversationPage() {
       setSpeakingMsgId(aiMsgId)
 
       setMessages(prev => [...prev, {
+        id: aiMsgId,
+        role: 'ai',
+        text: conversation,
+        correction: correction
       }])
 
       speakText(conversation, aiMsgId)
