@@ -1,5 +1,6 @@
 // Service Worker for PWA support
-const CACHE_NAME = 'speakduck-v1';
+// 更新版本号以强制刷新缓存
+const CACHE_NAME = 'speakduck-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -9,6 +10,8 @@ const urlsToCache = [
 
 // 安装 Service Worker
 self.addEventListener('install', (event) => {
+  // 立即激活新的 Service Worker
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -20,6 +23,7 @@ self.addEventListener('install', (event) => {
 
 // 激活 Service Worker
 self.addEventListener('activate', (event) => {
+  // 立即控制所有页面
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -30,11 +34,11 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
-// 拦截请求
+// 拦截请求 - 使用"网络优先，缓存后备"策略
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   // 仅处理 GET；跳过所有非 GET（例如 POST 到 /api）以避免缓存错误
@@ -48,22 +52,24 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(req));
     return;
   }
+
+  // 网络优先策略：先尝试从网络获取，失败时使用缓存
   event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((resp) => {
-        if (!resp || resp.status !== 200 || resp.type !== 'basic') return resp;
-        const respClone = resp.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          // 尝试写入缓存；失败时静默忽略
-          try { cache.put(req, respClone) } catch (_) {}
-        });
+    fetch(req)
+      .then((resp) => {
+        // 网络请求成功，更新缓存
+        if (resp && resp.status === 200 && resp.type === 'basic') {
+          const respClone = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            try { cache.put(req, respClone) } catch (_) {}
+          });
+        }
         return resp;
-      }).catch(() => {
-        // 网络失败时回退到缓存（若有）
+      })
+      .catch(() => {
+        // 网络失败，回退到缓存
         return caches.match(req);
-      });
-    })
+      })
   );
 });
 
