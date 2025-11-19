@@ -13,13 +13,29 @@ const techTheme = {
   headerBg: 'rgba(15, 23, 42, 0.85)',
   cardBg: 'rgba(30, 41, 59, 0.7)',
   userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+  import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import styled, { keyframes, css, ThemeProvider } from 'styled-components'
+import Toast from './Toast'
+
+// --- Themes ---
+
+const techTheme = {
+  id: 'tech',
+  bg: '#0f172a',
+  text: '#f8fafc',
+  textSecondary: 'rgba(255, 255, 255, 0.5)',
+  headerBg: 'rgba(15, 23, 42, 0.85)',
+  cardBg: 'rgba(30, 41, 59, 0.7)',
+  userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
   aiBubble: 'rgba(30, 41, 59, 0.7)',
   accent: '#38bdf8',
   micActive: '#ef4444',
   micInactive: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
   border: 'rgba(255, 255, 255, 0.08)',
   inputBg: 'rgba(30, 41, 59, 0.6)',
-  shadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+  shadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+  divider: 'rgba(255, 255, 255, 0.1)'
 }
 
 const auraTheme = {
@@ -37,7 +53,8 @@ const auraTheme = {
   micInactive: 'linear-gradient(135deg, #d8b4fe, #f472b6)', // Pastel purple/pink
   border: 'rgba(0, 0, 0, 0.05)',
   inputBg: 'rgba(255, 255, 255, 0.9)',
-  shadow: '0 10px 30px rgba(168, 85, 247, 0.15)'
+  shadow: '0 10px 30px rgba(168, 85, 247, 0.15)',
+  divider: 'rgba(0, 0, 0, 0.05)'
 }
 
 // --- Styled Components & Animations ---
@@ -169,6 +186,37 @@ const RoleLabel = styled.span`
   margin-bottom: 6px;
   margin-left: ${props => props.role === 'user' ? '0' : '12px'};
   margin-right: ${props => props.role === 'user' ? '12px' : '0'};
+`
+
+const TranslationDivider = styled.div`
+  height: 1px;
+  background: ${props => props.theme.divider};
+  margin: 12px 0;
+`
+
+const TranslationText = styled.div`
+  font-size: 0.95rem;
+  color: ${props => props.theme.textSecondary};
+  font-style: italic;
+`
+
+const TranslateBtn = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.accent};
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-top: 8px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.8;
+  
+  &:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
 `
 
 const Controls = styled.div`
@@ -347,13 +395,44 @@ export default function ConversationPage() {
       synthRef.current.cancel()
     }
 
-    const utterance = new SpeechSynthesisUtterance(text)
+    // Remove emojis for speech
+    const cleanText = text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '')
+
+    const utterance = new SpeechSynthesisUtterance(cleanText)
     utterance.lang = 'en-US'
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
 
     synthRef.current.speak(utterance)
+  }
+
+  const handleTranslate = async (index, text) => {
+    if (messages[index].translation) return
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'user', text: `Translate this English text to Chinese (Simplified). Output ONLY the translation. Text: "${text}"` }
+          ]
+        })
+      })
+
+      const data = await response.json()
+      if (data.reply) {
+        setMessages(prev => {
+          const newMsgs = [...prev]
+          newMsgs[index] = { ...newMsgs[index], translation: data.reply }
+          return newMsgs
+        })
+      }
+    } catch (error) {
+      console.error('Translation error:', error)
+      showNotice('Translation failed.', 'error')
+    }
   }
 
   const handleSendMessage = async (text) => {
@@ -414,6 +493,21 @@ export default function ConversationPage() {
               <RoleLabel role={msg.role}>{msg.role === 'ai' ? 'AI Tutor' : 'You'}</RoleLabel>
               <Bubble role={msg.role}>
                 {msg.text}
+                {msg.role === 'ai' && (
+                  <>
+                    {msg.translation && (
+                      <>
+                        <TranslationDivider />
+                        <TranslationText>{msg.translation}</TranslationText>
+                      </>
+                    )}
+                    {!msg.translation && (
+                      <TranslateBtn onClick={() => handleTranslate(index, msg.text)}>
+                        文/A Translate
+                      </TranslateBtn>
+                    )}
+                  </>
+                )}
               </Bubble>
             </BubbleWrapper>
           ))}
