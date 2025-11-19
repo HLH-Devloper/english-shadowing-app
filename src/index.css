@@ -1,14 +1,3 @@
-    background: linear-gradient(180deg, var(--primary-weak), var(--bg) 240px);
-    color: var(--text);
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    }
-
-    .app-container {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
     }
 
     .upload-page {
