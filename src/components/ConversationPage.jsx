@@ -756,6 +756,14 @@ export default function ConversationPage() {
     return () => unsub()
   }, [])
 
+  // Auto-scroll to bottom
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 100)
+    return () => clearTimeout(timeoutId)
+  }, [messages, isListening, suggestions])
+
   // Initialize Speech Recognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -966,6 +974,7 @@ export default function ConversationPage() {
     }]
     setMessages(newMessages)
     setInputText('')
+    setSuggestions([]) // Clear suggestions immediately
 
     try {
       const response = await fetch('/api/chat', {
