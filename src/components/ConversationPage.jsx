@@ -473,6 +473,40 @@ const StatusText = styled.span`
   text-transform: uppercase;
 `
 
+const SuggestionContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 24px;
+  background: ${props => props.theme.headerBg};
+  border-top: ${props => props.theme.border};
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  
+  &::-webkit-scrollbar { display: none; }
+`
+
+const SuggestionChip = styled.button`
+  background: ${props => props.theme.cardBg};
+  border: ${props => props.theme.border};
+  color: ${props => props.theme.text};
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: ${props => props.theme.id === 'pop' ? '2px 2px 0px #000' : '0 2px 8px rgba(0,0,0,0.05)'};
+  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : props.theme.border};
+  flex-shrink: 0;
+
+  &:hover {
+    background: ${props => props.theme.accent};
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: ${props => props.theme.id === 'pop' ? '2px 2px 0px #000' : '0 4px 12px rgba(0,0,0,0.1)'};
+  }
+`
+
 // --- Settings Sidebar ---
 
 const SidebarOverlay = styled.div`
@@ -668,18 +702,6 @@ export default function ConversationPage() {
   const [inputText, setInputText] = useState('')
   const [toastMsg, setToastMsg] = useState('')
   const [toastType, setToastType] = useState('info')
-
-  // Settings State
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [scenario, setScenario] = useState('Just Vibe')
-  const [difficulty, setDifficulty] = useState('Intermediate')
-  const [translatingIndices, setTranslatingIndices] = useState(new Set())
-
-  // Speaking State
-  const [speakingMsgId, setSpeakingMsgId] = useState(null)
-
-  // Membership State
-  const [isMember, setIsMember] = useState(null) // null = loading, false = not member, true = member
 
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
@@ -963,9 +985,24 @@ export default function ConversationPage() {
 
       const fullReply = data.reply || "Sorry, I couldn't understand that."
 
-      const parts = fullReply.split('|||')
+      // Parse Suggestions
+      let conversationContent = fullReply
+      const suggestionSplit = fullReply.split('###SUGGESTIONS###')
+      if (suggestionSplit.length > 1) {
+        conversationContent = suggestionSplit[0].trim()
+        try {
+          const parsedSuggestions = JSON.parse(suggestionSplit[1])
+          if (Array.isArray(parsedSuggestions)) {
+            setSuggestions(parsedSuggestions)
+          }
+        } catch (e) {
+          console.error('Failed to parse suggestions:', e)
+        }
+      }
+
+      const parts = conversationContent.split('|||')
       let correction = null
-      let conversation = fullReply
+      let conversation = conversationContent
 
       if (parts.length > 1) {
         correction = parts[0].trim()
@@ -1111,6 +1148,16 @@ export default function ConversationPage() {
         </ChatArea>
 
         <Controls>
+          {suggestions.length > 0 && !isListening && (
+            <SuggestionContainer>
+              {suggestions.map((sugg, i) => (
+                <SuggestionChip key={i} onClick={() => setInputText(sugg)}>
+                  {sugg}
+                </SuggestionChip>
+              ))}
+            </SuggestionContainer>
+          )}
+
           {isListening ? (
             <RecordingBar>
               <ActionButton variant="cancel" onClick={cancelRecording}>✕</ActionButton>
