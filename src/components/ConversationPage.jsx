@@ -201,13 +201,14 @@ const BlurOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  background: ${props => props.theme.id === 'tech' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)'};
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: inherit;
+  transition: opacity 0.3s ease;
 `
 
 const RoleLabel = styled.span`
@@ -479,6 +480,7 @@ const OptionButton = styled.button`
   text-align: left;
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Changed to space-between for checkmark */
   gap: 10px;
   font-size: 0.85rem;
   transition: all 0.2s;
@@ -486,6 +488,17 @@ const OptionButton = styled.button`
   &:hover {
     background: ${props => props.active ? props.theme.accent : 'rgba(255, 255, 255, 0.1)'};
   }
+`
+
+const OptionContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`
+
+const Checkmark = styled.span`
+  font-size: 1rem;
+  font-weight: bold;
 `
 
 const Icon = styled.span`
@@ -549,8 +562,8 @@ export default function ConversationPage() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition()
-      recognition.continuous = true // Keep listening until stopped
-      recognition.interimResults = true // Show results as you speak
+      recognition.continuous = true
+      recognition.interimResults = true
       recognition.lang = 'en-US'
 
       recognition.onstart = () => {
@@ -562,8 +575,7 @@ export default function ConversationPage() {
       }
 
       recognition.onend = () => {
-        // Only stop if explicitly requested or error, otherwise restart if continuous failed
-        // But here we manage state manually
+        // Handled by manual stop
       }
 
       recognition.onresult = (event) => {
@@ -578,15 +590,8 @@ export default function ConversationPage() {
           }
         }
 
-        // Update input text with what we have so far
-        // Note: This simple logic appends. For a proper input box sync, we might need more complex logic
-        // But for now, replacing input text with the latest transcript chunk is standard for this UI
         if (finalTranscript || interimTranscript) {
           setInputText(prev => {
-            // If we want to append, we need to be careful not to duplicate
-            // For simplicity in this UI, we'll just show the current session's transcript
-            // A better way is to just setInputText(finalTranscript + interimTranscript) 
-            // but that requires clearing it on start.
             return finalTranscript + interimTranscript
           })
         }
@@ -614,7 +619,7 @@ export default function ConversationPage() {
   }, [messages])
 
   const startRecording = () => {
-    setInputText('') // Clear input for new speech
+    setInputText('')
     recognitionRef.current?.start()
   }
 
@@ -639,12 +644,12 @@ export default function ConversationPage() {
       synthRef.current.cancel()
     }
 
-    // Remove emojis for speech
     const cleanText = text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '')
 
     const utterance = new SpeechSynthesisUtterance(cleanText)
     utterance.lang = 'en-US'
 
+    // Note: onstart might fire slightly after we want, so we set state in handleSendMessage too
     utterance.onstart = () => {
       setSpeakingMsgId(msgId)
     }
@@ -761,6 +766,9 @@ export default function ConversationPage() {
 
       const aiMsgId = Date.now().toString() + '-ai'
 
+      // Set speaking state IMMEDIATELY before rendering
+      setSpeakingMsgId(aiMsgId)
+
       setMessages(prev => [...prev, {
         id: aiMsgId,
         role: 'ai',
@@ -778,6 +786,11 @@ export default function ConversationPage() {
   const handleScenarioChange = (newScenario) => {
     setScenario(newScenario)
     showNotice(`Scenario changed to: ${newScenario}`, 'success')
+  }
+
+  const handleDifficultyChange = (newDifficulty) => {
+    setDifficulty(newDifficulty)
+    showNotice(`Difficulty set to: ${newDifficulty}`, 'success')
   }
 
   const formatTime = (seconds) => {
@@ -818,7 +831,7 @@ export default function ConversationPage() {
                 {/* Blur Overlay for AI messages being spoken */}
                 {msg.role === 'ai' && speakingMsgId === msg.id && (
                   <BlurOverlay>
-                    <LoadingDots style={{ color: '#fff', fontWeight: 'bold' }}>Speaking</LoadingDots>
+                    <LoadingDots style={{ color: theme.id === 'tech' ? '#fff' : '#000', fontWeight: 'bold' }}>Speaking</LoadingDots>
                   </BlurOverlay>
                 )}
 
@@ -882,7 +895,7 @@ export default function ConversationPage() {
                 >
                   🎤
                 </MicButton>
-                <StatusText>Tap to Speak</StatusText>
+                <StatusText isListening={isListening}>Tap to Speak</StatusText>
               </MicContainer>
             </>
           )}
@@ -903,13 +916,15 @@ export default function ConversationPage() {
                 active={theme.id === 'tech'}
                 onClick={() => setTheme(techTheme)}
               >
-                <Icon>✨</Icon> Tech (Dark)
+                <OptionContent><Icon>✨</Icon> Tech (Dark)</OptionContent>
+                {theme.id === 'tech' && <Checkmark>✓</Checkmark>}
               </OptionButton>
               <OptionButton
                 active={theme.id === 'aura'}
                 onClick={() => setTheme(auraTheme)}
               >
-                <Icon>☁️</Icon> Aura (Light)
+                <OptionContent><Icon>☁️</Icon> Aura (Light)</OptionContent>
+                {theme.id === 'aura' && <Checkmark>✓</Checkmark>}
               </OptionButton>
             </OptionGrid>
           </Section>
@@ -921,9 +936,10 @@ export default function ConversationPage() {
                 <OptionButton
                   key={diff.id}
                   active={difficulty === diff.id}
-                  onClick={() => setDifficulty(diff.id)}
+                  onClick={() => handleDifficultyChange(diff.id)}
                 >
-                  {diff.label}
+                  <OptionContent>{diff.label}</OptionContent>
+                  {difficulty === diff.id && <Checkmark>✓</Checkmark>}
                 </OptionButton>
               ))}
             </OptionGrid>
@@ -938,7 +954,8 @@ export default function ConversationPage() {
                   active={scenario === scen.id}
                   onClick={() => handleScenarioChange(scen.id)}
                 >
-                  <Icon>{scen.icon}</Icon> {scen.label}
+                  <OptionContent><Icon>{scen.icon}</Icon> {scen.label}</OptionContent>
+                  {scenario === scen.id && <Checkmark>✓</Checkmark>}
                 </OptionButton>
               ))}
             </OptionGrid>
