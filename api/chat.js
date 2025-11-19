@@ -107,6 +107,28 @@ If the user makes a mistake (grammar, spelling, unnatural expression):
 If the user's English is correct:
 [Conversational Response in English]
 
+RULES:
+1. CORRECTION SECTION (before |||):
+   - Use Chinese primarily to explain the mistake.
+   - Provide the corrected English sentence.
+2. RESPONSE SECTION (after ||| or if no mistake):
+   - Pure English.
+   - Continue the conversation naturally based on the '${scenario}' scenario.
+   - Do NOT mention the mistake here.
+3. If the user speaks Chinese:
+   - Reply in English (Response Section) and encourage them to speak English.
+4. Do NOT output ||| if there is no correction.
+
+FINAL STEP:
+At the very end of your response, generate 3 short, natural follow-up responses that the user might say next.
+- **CRITICAL**: These must be answers to the question YOU just asked in the "Response Section".
+- Example: If you asked "Do you like coffee?", suggestions should be ["Yes, I love it!", "No, I prefer tea.", "I drink it every day."].
+- Format: ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"]`;
+
+        // Debug: Check environment variables (masked)
+        const geminiKey = process.env.GEMINI_API_KEY;
+        const googleKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+        const hasKey = !!(geminiKey || googleKey);
 
         let text = '';
         let lastError = null;
@@ -199,7 +221,7 @@ If the user's English is correct:
 
                     if (text) break;
                 } catch (err) {
-                    console.warn(`Gemini Model ${ modelName } failed: `, err.message);
+                    console.warn(`Gemini Model ${modelName} failed: `, err.message);
                     lastError = err;
                 }
             }
@@ -224,18 +246,18 @@ If the user's English is correct:
                 try {
                     text = await callOpenRouter(modelName, openAIMessages, systemPrompt);
                     if (text) {
-                        console.log(`OpenRouter fallback success with ${ modelName } `);
+                        console.log(`OpenRouter fallback success with ${modelName} `);
                         break;
                     }
                 } catch (err) {
-                    console.warn(`OpenRouter Model ${ modelName } failed: `, err.message);
+                    console.warn(`OpenRouter Model ${modelName} failed: `, err.message);
                     lastError = err;
                 }
             }
         }
 
         if (!text) {
-            throw new Error(`All models failed.Tried: ${ triedModels.join(', ') }. Last error: ${ lastError?.message } `);
+            throw new Error(`All models failed.Tried: ${triedModels.join(', ')}. Last error: ${lastError?.message} `);
         }
 
         res.status(200).json({ reply: text });
