@@ -82,14 +82,14 @@ export default async function handler(req, res) {
         let difficultyInstruction = '';
         switch (difficulty) {
             case 'Beginner':
-                difficultyInstruction = 'Use simple vocabulary (CEFR A1-A2). Speak slowly and clearly using short sentences. Avoid idioms.';
+                difficultyInstruction = 'STRICTLY LIMIT your vocabulary to CEFR A1-A2 levels. Use ONLY simple words. Speak slowly and clearly using short, simple sentences. AVOID all idioms and complex grammar.';
                 break;
             case 'Advanced':
-                difficultyInstruction = 'Use sophisticated vocabulary and idioms (CEFR C1-C2). Speak naturally and fluently with complex sentence structures.';
+                difficultyInstruction = 'Use sophisticated, academic, and native-level vocabulary (CEFR C1-C2). Use complex sentence structures, idioms, and phrasal verbs freely. Speak naturally and fluently.';
                 break;
             case 'Intermediate':
             default:
-                difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression.';
+                difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression. You can use common phrasal verbs but avoid obscure idioms.';
                 break;
         }
 
@@ -111,24 +111,24 @@ Case 2: User is correct
 
 EXAMPLES:
 User: "I go to park yesterday."
-Output: "go" 应该是 "went"，因为是过去时。|||That sounds nice! Did you go alone or with friends?
+Output: "go" 应该是 "went"，因为是过去时。|||That sounds nice! Did you go alone or with friends?###SUGGESTIONS###["I went alone.", "I went with my family.", "I met some friends there."]
 
 User: "I like apple."
-Output: "apple" 是可数名词，通常说 "I like apples"。|||Me too! Apples are delicious. What's your favorite kind?
+Output: "apple" 是可数名词，通常说 "I like apples"。|||Me too! Apples are delicious. What's your favorite kind?###SUGGESTIONS###["I like Fuji apples.", "I prefer green apples.", "I actually like oranges more."]
 
 User: "Hello!"
-Output: Hi there! How are you doing today?
+Output: Hi there! How are you doing today?###SUGGESTIONS###["I'm doing great, thanks!", "I'm a bit tired.", "Just relaxing."]
 
 RULES:
 1. The part BEFORE ||| is for CORRECTIONS ONLY (in Chinese).
 2. The part AFTER ||| is for the CONVERSATION (in English).
 3. If there is no mistake, do NOT output |||. Just output the English response.
 
-FINAL STEP:
-At the very end of your response, generate 3 short, natural follow-up responses that the user might say next.
-- **CRITICAL**: These must be answers to the question YOU just asked in the "Response Section".
-- Example: If you asked "Do you like coffee?", suggestions should be ["Yes, I love it!", "No, I prefer tea.", "I drink it every day."].
-- Format: ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"]`;
+CRITICAL REQUIREMENT:
+You MUST append ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"] to the end of EVERY response.
+- These suggestions must be natural answers to the question you just asked.
+- If you didn't ask a question, suggest ways to continue the topic.
+- DO NOT FORGET THIS STEP.`;
 
         // Debug: Check environment variables (masked)
         const geminiKey = process.env.GEMINI_API_KEY;
