@@ -101,6 +101,13 @@ export default function ConversationPage() {
       }
 
       const data = await response.json()
+
+      // Check for soft error (200 OK but contains error info)
+      if (data.error) {
+        console.error('API Soft Error:', data)
+        throw new Error(data.message || data.error)
+      }
+
       const aiText = data.reply || "Sorry, I couldn't understand that."
 
       setMessages(prev => [...prev, { role: 'ai', text: aiText }])
