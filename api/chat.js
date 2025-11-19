@@ -54,10 +54,12 @@ export default async function handler(req, res) {
         const triedModels = [];
 
         // Construct history for Gemini
-        let history = messages.slice(0, -1).map(msg => ({
-            role: msg.role === 'ai' ? 'model' : 'user',
-            parts: [{ text: msg.text }]
-        }));
+        let history = messages.slice(0, -1)
+            .filter(msg => msg.text && msg.text.trim() !== '') // Filter out empty messages
+            .map(msg => ({
+                role: msg.role === 'ai' ? 'model' : 'user',
+                parts: [{ text: msg.text }]
+            }));
 
         // Gemini requires the first message in history to be from 'user'
         // If the history starts with a 'model' message (e.g. the initial greeting), remove it.
@@ -127,7 +129,9 @@ Rules:
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
             debug: {
                 hasKey: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
-                nodeVersion: process.version
+                nodeVersion: process.version,
+                historyLength: messages?.length,
+                isTranslation: messages?.[messages.length - 1]?.text?.startsWith('Translate this English text to Chinese')
             }
         });
     }
