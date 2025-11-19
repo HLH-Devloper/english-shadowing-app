@@ -329,7 +329,7 @@ const Sidebar = styled.div`
   top: 0;
   right: 0;
   bottom: 0;
-  width: 320px;
+  width: 280px; /* Reduced width slightly */
   background: ${props => props.theme.sidebarBg};
   backdrop-filter: blur(20px);
   z-index: 100;
@@ -338,7 +338,7 @@ const Sidebar = styled.div`
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 20px; /* Reduced padding */
   border-left: 1px solid ${props => props.theme.border};
 `
 
@@ -346,27 +346,27 @@ const SidebarHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px; /* Reduced margin */
 `
 
 const SidebarTitle = styled.h2`
-  font-size: 1.2rem;
+  font-size: 1rem; /* Reduced from 1.2rem */
   font-weight: 700;
   margin: 0;
   color: ${props => props.theme.text};
 `
 
 const SectionTitle = styled.h3`
-  font-size: 0.75rem;
+  font-size: 0.7rem; /* Reduced from 0.75rem */
   font-weight: 600;
   text-transform: uppercase;
   color: ${props => props.theme.textSecondary};
-  margin: 0 0 12px 0;
+  margin: 0 0 10px 0; /* Reduced margin */
   letter-spacing: 1px;
 `
 
 const Section = styled.div`
-  margin-bottom: 32px;
+  margin-bottom: 24px; /* Reduced margin */
 `
 
 const OptionGrid = styled.div`
@@ -379,14 +379,14 @@ const OptionButton = styled.button`
   background: ${props => props.active ? props.theme.accent : 'rgba(255, 255, 255, 0.05)'};
   color: ${props => props.active ? '#fff' : props.theme.text};
   border: 1px solid ${props => props.active ? props.theme.accent : props.theme.border};
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 10px 14px; /* Reduced padding */
+  border-radius: 10px; /* Slightly smaller radius */
   cursor: pointer;
   text-align: left;
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 0.95rem;
+  gap: 10px;
+  font-size: 0.85rem; /* Reduced from 0.95rem */
   transition: all 0.2s;
 
   &:hover {
@@ -395,7 +395,7 @@ const OptionButton = styled.button`
 `
 
 const Icon = styled.span`
-  font-size: 1.2rem;
+  font-size: 1rem; /* Reduced from 1.2rem */
 `
 
 // --- Constants ---

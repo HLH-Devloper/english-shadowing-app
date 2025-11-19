@@ -61,69 +61,81 @@ export default async function handler(req, res) {
 
         const lastMessageText = messages[messages.length - 1].text;
 
+        if (!lastMessageText || lastMessageText.trim() === '') {
+            throw new Error('Last message text is empty');
+        }
+
         // Check if this is a translation request
         const isTranslation = lastMessageText && lastMessageText.startsWith('Translate this English text to Chinese');
 
-        let history = [];
+        for (const modelName of candidateModels) {
+            triedModels.push(modelName);
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
 
-        if (isTranslation) {
-            // For translation, strictly empty history
-            history = [];
-        } else {
-            // 1. Initial Map & Filter
-            let rawHistory = messages.slice(0, -1)
-                .map(msg => ({
-                    role: msg.role === 'ai' ? 'model' : 'user',
-                    text: msg.text ? String(msg.text).trim() : ''
-                }))
-                .filter(msg => msg.text !== ''); // Remove empty messages
+                if (isTranslation) {
+                    // --- STRATEGY 1: Translation (Stateless) ---
+                    // Use generateContent directly for translation to avoid history issues
+                    const result = await model.generateContent(lastMessageText);
+                    const response = await result.response;
+                    text = response.text();
+                } else {
+                    // --- STRATEGY 2: Conversation (Stateful) ---
+                    // Construct history for Gemini
 
-            // 2. Merge Consecutive Roles
-            if (rawHistory.length > 0) {
-                let mergedHistory = [];
-                let currentMsg = rawHistory[0];
+                    // 1. Initial Map & Filter
+                    let rawHistory = messages.slice(0, -1)
+                        .map(msg => ({
+                            role: msg.role === 'ai' ? 'model' : 'user',
+                            text: msg.text ? String(msg.text).trim() : ''
+                        }))
+                        .filter(msg => msg.text !== ''); // Remove empty messages
 
-                for (let i = 1; i < rawHistory.length; i++) {
-                    const nextMsg = rawHistory[i];
-                    if (nextMsg.role === currentMsg.role) {
-                        currentMsg.text += '\n' + nextMsg.text;
-                    } else {
+                    // 2. Merge Consecutive Roles
+                    if (rawHistory.length > 0) {
+                        let mergedHistory = [];
+                        let currentMsg = rawHistory[0];
+
+                        for (let i = 1; i < rawHistory.length; i++) {
+                            const nextMsg = rawHistory[i];
+                            if (nextMsg.role === currentMsg.role) {
+                                currentMsg.text += '\n' + nextMsg.text;
+                            } else {
+                                mergedHistory.push(currentMsg);
+                                currentMsg = nextMsg;
+                            }
+                        }
                         mergedHistory.push(currentMsg);
-                        currentMsg = nextMsg;
+                        rawHistory = mergedHistory;
                     }
-                }
-                mergedHistory.push(currentMsg);
-                rawHistory = mergedHistory;
-            }
 
-            // 3. Ensure Start with User
-            while (rawHistory.length > 0 && rawHistory[0].role === 'model') {
-                rawHistory.shift();
-            }
+                    // 3. Ensure Start with User
+                    while (rawHistory.length > 0 && rawHistory[0].role === 'model') {
+                        rawHistory.shift();
+                    }
 
-            // 4. Convert to Gemini Format
-            history = rawHistory.map(msg => ({
-                role: msg.role,
-                parts: [{ text: msg.text }]
-            }));
+                    // 4. Convert to Gemini Format
+                    let history = rawHistory.map(msg => ({
+                        role: msg.role,
+                        parts: [{ text: msg.text }]
+                    }));
 
-            // --- Dynamic System Prompt Construction ---
+                    // --- Dynamic System Prompt Construction ---
+                    let difficultyInstruction = '';
+                    switch (difficulty) {
+                        case 'Beginner':
+                            difficultyInstruction = 'Use simple vocabulary (CEFR A1-A2). Speak slowly and clearly using short sentences. Avoid idioms.';
+                            break;
+                        case 'Advanced':
+                            difficultyInstruction = 'Use sophisticated vocabulary and idioms (CEFR C1-C2). Speak naturally and fluently with complex sentence structures.';
+                            break;
+                        case 'Intermediate':
+                        default:
+                            difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression.';
+                            break;
+                    }
 
-            let difficultyInstruction = '';
-            switch (difficulty) {
-                case 'Beginner':
-                    difficultyInstruction = 'Use simple vocabulary (CEFR A1-A2). Speak slowly and clearly using short sentences. Avoid idioms.';
-                    break;
-                case 'Advanced':
-                    difficultyInstruction = 'Use sophisticated vocabulary and idioms (CEFR C1-C2). Speak naturally and fluently with complex sentence structures.';
-                    break;
-                case 'Intermediate':
-                default:
-                    difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression.';
-                    break;
-            }
-
-            const systemPrompt = `You are a helpful and encouraging English language tutor.
+                    const systemPrompt = `You are a helpful and encouraging English language tutor.
 Current Scenario: ${scenario}
 Difficulty Level: ${difficulty}
 
@@ -149,32 +161,23 @@ RULES:
    - Reply in English (Response Section) and encourage them to speak English.
 4. Do NOT output ||| if there is no correction.`;
 
-            const systemHistory = [
-                { role: 'user', parts: [{ text: systemPrompt }] },
-                { role: 'model', parts: [{ text: `Understood. I will act as your English tutor for the '${scenario}' scenario at '${difficulty}' level.` }] }
-            ];
+                    const systemHistory = [
+                        { role: 'user', parts: [{ text: systemPrompt }] },
+                        { role: 'model', parts: [{ text: `Understood. I will act as your English tutor for the '${scenario}' scenario at '${difficulty}' level.` }] }
+                    ];
 
-            history = [...systemHistory, ...history];
-        }
+                    history = [...systemHistory, ...history];
+                    debugHistory = history;
 
-        debugHistory = history;
+                    const chat = model.startChat({
+                        history: history,
+                        generationConfig: { maxOutputTokens: 500 },
+                    });
 
-        if (!lastMessageText || lastMessageText.trim() === '') {
-            throw new Error('Last message text is empty');
-        }
-
-        for (const modelName of candidateModels) {
-            triedModels.push(modelName);
-            try {
-                const model = genAI.getGenerativeModel({ model: modelName });
-                const chat = model.startChat({
-                    history: history,
-                    generationConfig: { maxOutputTokens: 500 },
-                });
-
-                const result = await chat.sendMessage(lastMessageText);
-                const response = await result.response;
-                text = response.text();
+                    const result = await chat.sendMessage(lastMessageText);
+                    const response = await result.response;
+                    text = response.text();
+                }
 
                 if (text) break;
             } catch (err) {
