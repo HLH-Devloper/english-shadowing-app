@@ -11,6 +11,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid messages format' });
     }
 
+    let triedModels = [];
+
     try {
         // Use the same environment variable name as dict-gemini.js
         const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -20,13 +22,15 @@ export default async function handler(req, res) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Candidate models to try, similar to dict-gemini.js
+        // Candidate models to try, exactly matching dict-gemini.js to ensure compatibility
         const candidateModels = [
             process.env.GEMINI_MODEL,
-            'gemini-1.5-flash',
+            'gemini-2.5-flash-preview-09-2025',
             'gemini-1.5-flash-latest',
             'gemini-1.5-flash-002',
-            'gemini-1.5-pro',
+            'gemini-1.5-pro-002',
+            'gemini-1.5-pro-latest',
+            'gemini-1.5-flash',
             'gemini-pro'
         ].filter(Boolean);
 
@@ -41,6 +45,7 @@ export default async function handler(req, res) {
         const lastMessage = messages[messages.length - 1].text;
 
         for (const modelName of candidateModels) {
+            triedModels.push(modelName);
             try {
                 const model = genAI.getGenerativeModel({ model: modelName });
 
@@ -70,6 +75,13 @@ export default async function handler(req, res) {
         res.status(200).json({ reply: text });
     } catch (error) {
         console.error('Gemini API Error:', error);
-        res.status(500).json({ error: 'Failed to generate response', details: error.message });
+        res.status(500).json({
+            error: 'Failed to generate response',
+            details: error.message,
+            debug: {
+                hasKey: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+                triedModels: triedModels,
+            }
+        });
     }
 }
