@@ -11,10 +11,10 @@ import Toast from './Toast'
 const techTheme = {
   id: 'tech',
   bg: '#0f172a',
-  bgImage: 'radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 70%)',
+  bgImage: 'radial-gradient(circle at 50% -20%, #3730a3 0%, #1e1b4b 40%, #0f172a 100%)',
   text: '#f8fafc',
   textSecondary: 'rgba(255, 255, 255, 0.5)',
-  headerBg: 'rgba(15, 23, 42, 0.85)',
+  headerBg: 'rgba(15, 23, 42, 0.7)',
   cardBg: 'rgba(30, 41, 59, 0.7)',
   userBubble: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
   aiBubble: 'rgba(30, 41, 59, 0.7)',
@@ -33,7 +33,7 @@ const techTheme = {
 const auraTheme = {
   id: 'aura',
   bg: '#fdfbfb',
-  bgImage: 'radial-gradient(circle at 50% 0%, #e9d5ff 0%, #fdfbfb 60%)',
+  bgImage: 'radial-gradient(circle at 50% -20%, #f5d0fe 0%, #ffffff 60%, #f8fafc 100%)',
   text: '#1e293b',
   textSecondary: 'rgba(30, 41, 59, 0.5)',
   headerBg: 'rgba(255, 255, 255, 0.7)',
@@ -76,6 +76,8 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   background: ${props => props.theme.bgImage || props.theme.bg};
+  background-size: cover;
+  background-attachment: fixed;
   color: ${props => props.theme.text};
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: hidden;
@@ -914,11 +916,11 @@ export default function ConversationPage() {
         {isMember === false && (
           <MemberOverlay>
             <MemberCard>
-              <MemberTitle>💎 Member Only</MemberTitle>
+              <MemberTitle>💎 会员专属功能</MemberTitle>
               <MemberDesc>
-                The AI Speaking Partner is an exclusive feature for our premium members. Upgrade now to unlock unlimited conversations!
+                AI 口语陪练是跟读鸭会员的专属权益。升级会员，即可解锁无限次 AI 对话练习，快速提升口语能力！
               </MemberDesc>
-              <UpgradeButton onClick={() => navigate('/')}>Go Back</UpgradeButton>
+              <UpgradeButton onClick={() => navigate('/')}>返回首页</UpgradeButton>
             </MemberCard>
           </MemberOverlay>
         )}
