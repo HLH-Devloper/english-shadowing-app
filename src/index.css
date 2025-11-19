@@ -3,45 +3,13 @@
   --text-secondary: #94a3b8;
   --muted: #94a3b8;
   --primary: #7c9cff;
-  --primary-hover: #6b8bd6;
-  --primary-weak: rgba(124, 156, 255, 0.10);
-  --success: #06D6A0;
-  --border: #1f2b4a;
-  }
-
-  body.theme-dark-minimal {
-    --bg: #0d1117;
-    --card: #0f141a;
-    --text: #c9d1d9;
-    --text-secondary: #8b949e;
-    --muted: #6e7681;
-    --primary: #7c9cff;
-    --primary-hover: #6b8bd6;
-    --primary-weak: rgba(124, 156, 255, 0.08);
-    --success: #06D6A0;
-    --border: #20252d;
-  }
-
-  /* Nord 深色主题 */
-  body.theme-dark {
-    /* Nord 高可读性版本（进一步提升对比度） */
-    --bg: #252b36;
-    --card: #343b47;
-    --text: #ffffff;
-    /* 主文本纯白，提高清晰度 */
-    --text-secondary: #e8eef7;
-    /* 次文本更亮 */
-    --muted: #d8e0ea;
-    /* 辅助文本更亮 */
-    --primary: #81a1c1;
-    /* Nord frost */
-    --primary-hover: #5e81ac;
-    /* 悬停更深以形成层次 */
-    --primary-weak: rgba(94, 129, 172, 0.22);
-    /* 胶囊背景更明显 */
-    --success: #a3be8c;
-    --border: #6a7a90;
-    /* 边框更亮以分隔卡片 */
+  --primary-hover: #5e81ac;
+  /* 悬停更深以形成层次 */
+  --primary-weak: rgba(94, 129, 172, 0.22);
+  /* 胶囊背景更明显 */
+  --success: #a3be8c;
+  --border: #6a7a90;
+  /* 边框更亮以分隔卡片 */
   }
 
   /* Nord 主题下关键文字提升可读性 */
