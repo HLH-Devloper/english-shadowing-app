@@ -12,12 +12,14 @@ try {
   const saved = localStorage.getItem('app-theme')
   const initial = saved || (document.body.className || 'theme-dark-edu')
   document.body.className = initial
-} catch {}
+} catch { }
 root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 )
+// Version Check
+console.log('🚀 Current Version: Feature-AI-Speaking-v1.0')
 
 // 注册 Service Worker（PWA 支持）
 if ('serviceWorker' in navigator) {

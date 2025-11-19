@@ -7,6 +7,7 @@ import RegisterPage from './components/RegisterPage'
 import PasswordPage from './components/PasswordPage'
 import InviteSeedPage from './components/InviteSeedPage'
 import RedeemPage from './components/RedeemPage'
+import ConversationPage from './components/ConversationPage'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/password" element={<PasswordPage />} />
           <Route path="/seed" element={<InviteSeedPage />} />
           <Route path="/redeem" element={<RedeemPage />} />
+          <Route path="/conversation" element={<ConversationPage />} />
         </Routes>
       </div>
     </Router>

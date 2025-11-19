@@ -148,6 +148,12 @@ export default function UploadPage() {
             aria-selected={activeTab === 'local'}
             onClick={() => setActiveTab('local')}
           >本地</button>
+          <button
+            className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'ai'}
+            onClick={() => setActiveTab('ai')}
+          >AI 对话</button>
         </nav>
         {/* 右上角操作：注册/用户信息 */}
         <div className="header-actions" style={{ position: 'relative', gap: 12 }}>
@@ -273,6 +279,33 @@ export default function UploadPage() {
           <div className="section">
             <h3 className="section-title">影视学习</h3>
             <p className="section-desc">功能开发中，敬请期待。未来将支持官方源的合法播放与学习。</p>
+          </div>
+        </div>
+      )}
+
+      {/* AI 对话分区 */}
+      {activeTab === 'ai' && (
+        <div className="tab-content" role="tabpanel" aria-label="AI 对话">
+          <div className="section">
+            <h3 className="section-title">AI 口语陪练</h3>
+            <p className="section-desc">选择一个话题，开始与 AI 进行一对一英语口语对话练习。</p>
+
+            <div className="upload-grid" style={{ marginTop: '20px' }}>
+              {[
+                { id: 'free', title: 'Free Talk', icon: '☕', desc: '自由对话，聊聊任何你想说的话题' },
+                { id: 'daily', title: 'Daily Life', icon: '🏠', desc: '日常生活，讨论天气、食物、爱好等' },
+                { id: 'travel', title: 'Travel', icon: '✈️', desc: '旅行场景，问路、预订酒店、机场对话' },
+                { id: 'business', title: 'Business', icon: '💼', desc: '职场英语，面试、会议、商务谈判' },
+              ].map(topic => (
+                <div key={topic.id} className="upload-slot" onClick={() => navigate('/conversation')}>
+                  <div className="upload-card" style={{ cursor: 'pointer' }}>
+                    <div className="upload-icon" style={{ fontSize: '48px' }}>{topic.icon}</div>
+                    <div className="upload-text">{topic.title}</div>
+                    <div className="upload-subtext">{topic.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
