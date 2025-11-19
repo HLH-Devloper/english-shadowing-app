@@ -22,16 +22,27 @@ root.render(
 console.log('🚀 Current Version: Feature-AI-Speaking-v1.0')
 
 // 注册 Service Worker（PWA 支持）
+// Service Worker registration disabled for development/debugging to ensure latest version is loaded
+// if ('serviceWorker' in navigator) {
+//   window.addEventListener('load', () => {
+//     navigator.serviceWorker.register('/sw.js')
+//       .then((registration) => {
+//         console.log('SW registered: ', registration);
+//       })
+//       .catch((registrationError) => {
+//         console.log('SW registration failed: ', registrationError);
+//       });
+//   });
+// }
+
+// Force unregister existing SW
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('SW registered: ', registration);
-      })
-      .catch((registrationError) => {
-        console.log('SW registration failed: ', registrationError);
-      });
-  });
+  navigator.serviceWorker.getRegistrations().then(function (registrations) {
+    for (let registration of registrations) {
+      registration.unregister()
+      console.log('SW unregistered to force update')
+    }
+  })
 }
 
 

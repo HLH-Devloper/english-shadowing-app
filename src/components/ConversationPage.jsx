@@ -88,20 +88,6 @@ export default function ConversationPage() {
 
     try {
       // Call API
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages })
-      })
-
-      if (!response.ok) throw new Error('API request failed')
-
-      const data = await response.json()
-      const aiText = data.reply || "Sorry, I couldn't understand that."
-
-      setMessages(prev => [...prev, { role: 'ai', text: aiText }])
-      speakText(aiText)
-
     } catch (error) {
       console.error('Chat error:', error)
       showNotice('Failed to get AI response.', 'error')
