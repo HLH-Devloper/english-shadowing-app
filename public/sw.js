@@ -1,6 +1,6 @@
 // Service Worker for PWA support
 // 更新版本号以强制刷新缓存
-const CACHE_NAME = 'speakduck-v2';
+const CACHE_NAME = 'speakduck-v3';
 const urlsToCache = [
   '/',
   '/index.html',
