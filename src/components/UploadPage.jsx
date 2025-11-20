@@ -132,7 +132,7 @@ export default function UploadPage() {
 
         <nav className="cyber-nav">
           <div className={`cyber-nav-item ${activeTab === 'movie' ? 'active' : ''}`} onClick={() => setActiveTab('movie')}>影视</div>
-          <div className={`cyber-nav-item ${activeTab === 'ted' ? 'active' : ''}`} onClick={() => setActiveTab('ted')}>TED</div>
+          <div className={`cyber-nav-item ${activeTab === 'ted' ? 'active' : ''}`} onClick={() => setActiveTab('ted')}>网络视频</div>
           <div className={`cyber-nav-item ${activeTab === 'local' ? 'active' : ''}`} onClick={() => setActiveTab('local')}>本地</div>
           <div className={`cyber-nav-item ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')}>AI陪练</div>
         </nav>
@@ -275,7 +275,56 @@ export default function UploadPage() {
           </div>
         )}
 
-        {(activeTab === 'ted' || activeTab === 'movie') && (
+        {activeTab === 'ted' && (
+          <div className="bento-grid">
+            <div className="bento-card bento-upload" style={{ cursor: 'default' }}>
+              <div className="upload-icon-circle">📺</div>
+              <h3 className="upload-title">在线视频跟读</h3>
+              <p className="upload-desc">支持 YouTube / TED 链接</p>
+
+              <div style={{ marginTop: '20px', width: '100%' }}>
+                <input
+                  type="text"
+                  placeholder="粘贴 YouTube 或 TED 视频链接..."
+                  value={tedUrl}
+                  onChange={(e) => setTedUrl(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #475569',
+                    background: 'rgba(0,0,0,0.2)',
+                    color: '#fff',
+                    marginBottom: '12px'
+                  }}
+                />
+                <button
+                  className="start-learning-btn"
+                  style={{ width: '100%', marginTop: '0' }}
+                  onClick={() => {
+                    if (!tedUrl) return;
+                    // 尝试解析 YouTube
+                    const ytReg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+                    const ytMatch = tedUrl.match(ytReg);
+                    const ytId = (ytMatch && ytMatch[2].length === 11) ? ytMatch[2] : null;
+
+                    if (ytId) {
+                      navigate('/player', { state: { useYoutubeEmbed: true, youtubeVideoId: ytId } });
+                      return;
+                    }
+
+                    // 尝试解析 TED
+                    openTedInPlayer(tedUrl);
+                  }}
+                >
+                  开始跟读
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'movie' && (
           <div className="coming-soon-state" style={{ padding: '100px', textAlign: 'center', color: '#fff' }}>
             <div className="lock-icon" style={{ fontSize: '64px', marginBottom: '20px' }}>🔒</div>
             <h3>功能开发中</h3>
