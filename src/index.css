@@ -3960,3 +3960,10 @@
         font-size: 12px;
       }
     }
+
+    /* Added for restored PlayerPage buttons */
+    .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
