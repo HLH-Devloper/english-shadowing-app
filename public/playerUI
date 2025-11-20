@@ -1,0 +1,257 @@
+import React, { useState, useRef, useEffect } from 'react';
+import {
+Play, Pause, SkipBack, SkipForward, Volume2, Settings,
+Maximize, ChevronLeft, Star, MoreHorizontal, Type,
+Download, MessageSquare, Share2, Heart, Layers
+} from 'lucide-react';
+const ModernPlayer = () => {
+const [isPlaying, setIsPlaying] = useState(false);
+const [currentTime, setCurrentTime] = useState(163); // 02:43
+const [duration, setDuration] = useState(1419); // 23:39
+const [volume, setVolume] = useState(80);
+const [activeSubtitleId, setActiveSubtitleId] = useState(5);
+const [sidebarOpen, setSidebarOpen] = useState(true);
+// 模拟字幕数据
+const subtitles = [
+{ id: 1, time: "02:35", en: "pulled it out of my mouth", zh: "从我嘴里扯出来" },
+{ id: 2, time: "02:36", en: "and tied it around my neck", zh: "然后缠在我脖子上" },
+{ id: 3, time: "02:37", en: "Cookie", zh: "饼干" },
+{ id: 4, time: "02:40", en: "Carol moved her stuff out today", zh: "卡罗尔今天把她的东西搬走了" },
+{ id: 5, time: "02:43", en: "Let me get you some coffee. - Thanks", zh: "我帮你泡杯咖啡 - 谢谢", active: true },
+{ id: 6, time: "02:49", en: "No, no don't! Stop cleansing my aura", zh: "不要 别再净化我的灵气了" },
+{ id: 7, time: "02:54", en: "No, just leave my aura alone, okay", zh: "求你了 别碰我的灵气 好吗" },
+{ id: 8, time: "02:59", en: "I'll be fine, alright", zh: "我会没事的 好吧" },
+{ id: 9, time: "03:01", en: "Really, everyone. I hope she'll be very happy", zh: "真的 各位 我希望她能过得很幸福" },
+];
+// 格式化时间
+const formatTime = (seconds) => {
+const m = Math.floor(seconds / 60);
+const s = Math.floor(seconds % 60);
+return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+return (
+<div className="flex h-screen bg-[#050505] text-white font-sans overflow-hidden selection:bg-blue-500/30">
+
+    {/* Left Area: Video Player */}
+    <div className={`relative flex-1 flex flex-col transition-all duration-500 ${sidebarOpen ? 'mr-[360px]' : 'mr-0'
+        }`}>
+
+        {/* Top Nav Overlay */}
+        <div
+            className="absolute top-0 left-0 right-0 p-6 z-20 flex justify-between items-start bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+            <button
+                className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all group">
+                <ChevronLeft size={20}
+                    className="text-gray-300 group-hover:text-white group-hover:-translate-x-1 transition-transform" />
+                <span className="text-sm font-medium">Back to Library</span>
+            </button>
+            <div className="pointer-events-auto flex gap-3">
+                <button className="p-2.5 rounded-full bg-black/40 hover:bg-white/10 backdrop-blur-md transition-all"
+                    title="Switch Episode">
+                    <Layers size={20} />
+                </button>
+            </div>
+        </div>
+        {/* Video Container */}
+        <div className="flex-1 flex items-center justify-center relative bg-black group">
+            {/* Placeholder Image for Video */}
+            <div
+                className="relative w-full h-full max-h-[calc(100vh-100px)] aspect-video bg-[#1a1a1a] overflow-hidden shadow-2xl shadow-black">
+                {/* 模拟视频内容：Friends 剧照 */}
+                <img src="/api/placeholder/1280/720" alt="Video Content"
+                    className="w-full h-full object-cover opacity-80" />
+                {/* 模拟视频叠加层（暗角） */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30"></div>
+
+                {/* Center Play Button (Show on Pause) */}
+                {!isPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <button onClick={()=> setIsPlaying(true)}
+                        className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex
+                        items-center justify-center hover:scale-110 transition-transform duration-300 group"
+                        >
+                        <Play size={32} fill="white" className="ml-1" />
+                    </button>
+                </div>
+                )}
+                {/* Floating Caption Overlay (On Video) */}
+                <div className="absolute bottom-24 left-0 right-0 text-center px-10 pointer-events-none">
+                    <p
+                        className="text-2xl md:text-3xl font-bold text-yellow-400 drop-shadow-lg mb-2 animate-fade-in-up">
+                        Let me get you some coffee. - Thanks
+                    </p>
+                    <p className="text-lg text-white/90 drop-shadow-md font-medium">
+                        我帮你泡杯咖啡 - 谢谢
+                    </p>
+                </div>
+            </div>
+        </div>
+        {/* Bottom Floating Control Bar */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl z-30">
+            <div
+                className="bg-[#1a1a1a]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl shadow-black/50 flex flex-col gap-3 transition-all hover:bg-[#1a1a1a]">
+
+                {/* Progress Bar */}
+                <div className="relative w-full h-1.5 bg-white/10 rounded-full cursor-pointer group">
+                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full relative"
+                        style={{ width: `${(currentTime / duration) * 100}%` }}>
+                        <div
+                            className="absolute right-[-6px] top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg scale-0 group-hover:scale-100 transition-transform">
+                        </div>
+                    </div>
+                </div>
+                {/* Controls Row */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button onClick={()=> setIsPlaying(!isPlaying)} className="text-white hover:text-blue-400
+                            transition-colors">
+                            {isPlaying ?
+                            <Pause size={24} fill="currentColor" /> :
+                            <Play size={24} fill="currentColor" />}
+                        </button>
+                        <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
+                            <span>{formatTime(currentTime)}</span>
+                            <span className="text-gray-600">/</span>
+                            <span>{formatTime(duration)}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        {/* Speed Control */}
+                        <div
+                            className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-colors">
+                            <span className="text-xs font-bold">1.0x</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-gray-400">
+                            <SkipBack size={20} className="hover:text-white cursor-pointer" />
+                            <SkipForward size={20} className="hover:text-white cursor-pointer" />
+                            <Volume2 size={20} className="hover:text-white cursor-pointer" />
+                            <Settings size={20} className="hover:text-white cursor-pointer" />
+                        </div>
+                        <button onClick={()=> setSidebarOpen(!sidebarOpen)}
+                            className={`p-2 rounded-lg transition-colors ${sidebarOpen ? 'bg-blue-500/20 text-blue-400'
+                            : 'hover:bg-white/10 text-gray-400'}`}
+                            >
+                            <MessageSquare size={20} />
+                        </button>
+                        <Maximize size={20} className="text-gray-400 hover:text-white cursor-pointer" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {/* Right Area: Sidebar (Glassmorphism) */}
+    <div className={`fixed right-0 top-0 bottom-0 w-[360px] bg-[#0F0F12]/95 backdrop-blur-2xl border-l border-white/5
+        shadow-2xl transform transition-transform duration-500 z-40 flex flex-col ${sidebarOpen ? 'translate-x-0'
+        : 'translate-x-full' }`}>
+        {/* Sidebar Header */}
+        <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
+            <div>
+                <h3 className="text-sm font-bold text-white tracking-wide">TRANSCRIPT</h3>
+                <p className="text-[10px] text-gray-500 mt-0.5 uppercase tracking-widest">Friends S01E02</p>
+            </div>
+            <div className="flex gap-1">
+                <button className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                    title="Font Size">
+                    <Type size={16} />
+                </button>
+                <button className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                    title="Export">
+                    <Download size={16} />
+                </button>
+            </div>
+        </div>
+        {/* Subtitle List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            {subtitles.map((sub) => (
+            <div key={sub.id} onClick={()=> setActiveSubtitleId(sub.id)}
+                className={`group relative p-4 rounded-xl transition-all duration-300 cursor-pointer border
+                border-transparent ${
+                sub.active
+                ? 'bg-gradient-to-r from-blue-600/10 to-purple-600/10 border-blue-500/30
+                shadow-[0_0_30px_rgba(59,130,246,0.1)]'
+                : 'hover:bg-white/5 hover:border-white/5'
+                }`}
+                >
+                {/* Left Active Indicator */}
+                {sub.active && (
+                <div
+                    className="absolute left-0 top-4 bottom-4 w-1 bg-blue-500 rounded-r-full shadow-[0_0_10px_#3b82f6]">
+                </div>
+                )}
+                <div className="flex justify-between items-start mb-1.5 pl-2">
+                    <span className={`text-[10px] font-mono ${sub.active ? 'text-blue-400' : 'text-gray-600' }`}>
+                        {sub.time}
+                    </span>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="text-gray-500 hover:text-pink-500 transition-colors">
+                            <Heart size={14} />
+                        </button>
+                        <button className="text-gray-500 hover:text-white transition-colors">
+                            <Share2 size={14} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="pl-2 space-y-1.5">
+                    <p className={`text-sm font-medium leading-relaxed ${sub.active ? 'text-white'
+                        : 'text-gray-300 group-hover:text-gray-100' }`}>
+                        {sub.en}
+                    </p>
+                    <p className={`text-xs leading-relaxed ${sub.active ? 'text-blue-200/80'
+                        : 'text-gray-500 group-hover:text-gray-400' }`}>
+                        {sub.zh}
+                    </p>
+                </div>
+                {/* Dictionary/Detail hint on active */}
+                {sub.active && (
+                <div className="mt-3 pl-2 flex gap-2">
+                    <span
+                        className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/20">cleansing</span>
+                    <span
+                        className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/20">aura</span>
+                </div>
+                )}
+            </div>
+            ))}
+
+            {/* Bottom spacer */}
+            <div className="h-20"></div>
+        </div>
+        {/* Sidebar Footer (Stats or Ad) */}
+        <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-md">
+            <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>Progress</span>
+                <span>42%</span>
+            </div>
+            <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
+                <div className="h-full w-[42%] bg-gradient-to-r from-green-400 to-emerald-500"></div>
+            </div>
+        </div>
+    </div>
+    {/* Custom Scrollbar Styles */}
+    <style>
+        {
+            ` .custom-scrollbar::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .custom-scrollbar::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+            }
+
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            `
+        }
+    </style>
+</div>
+);
+};
+export default ModernPlayer;
