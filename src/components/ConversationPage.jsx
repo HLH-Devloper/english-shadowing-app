@@ -1177,7 +1177,7 @@ export default function ConversationPage() {
         </ChatArea>
 
         <Controls>
-          {suggestions.length > 0 && !isListening && (
+          {suggestions.length > 0 && (
             <SuggestionContainer>
               {suggestions.map((sugg, i) => (
                 <SuggestionChip key={i} onClick={() => setInputText(sugg)}>
@@ -1195,16 +1195,37 @@ export default function ConversationPage() {
                   <WaveBar key={i} delay={d} />
                 ))}
               </Waveform>
-              <Input
+              <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    sendRecording()
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    if (inputText.trim()) {
+                      sendRecording()
+                    }
                   }
                 }}
                 placeholder="Listening..."
-                style={{ flex: 1, margin: '0 12px' }}
+                rows={1}
+                style={{
+                  flex: 1,
+                  margin: '0 12px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'inherit',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  resize: 'none',
+                  overflow: 'hidden',
+                  minHeight: '24px',
+                  maxHeight: '120px',
+                  overflowY: 'auto'
+                }}
+                onInput={(e) => {
+                  e.target.style.height = 'auto'
+                  e.target.style.height = e.target.scrollHeight + 'px'
+                }}
               />
               <Timer>{formatTime(recordingTime)}</Timer>
               <ActionButton onClick={sendRecording}>➜</ActionButton>
