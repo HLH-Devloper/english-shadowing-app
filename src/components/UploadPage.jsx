@@ -120,25 +120,32 @@ export default function UploadPage() {
   }
 
   return (
-    <section className="upload-page">
-      {/* Neo-Pop Header */}
-      <header className="pop-header">
-        <div className="pop-brand">
-          <div className="pop-logo-img">
-            <BrandDuck src="/duck-follow-me.png" fallbackSrc="/duck-follow-me2.png" />
+    <section className="cyber-page">
+      {/* Cyber Header */}
+      <header className="cyber-header">
+        <div className="cyber-brand">
+          <div className="cyber-logo">
+            <img src="/duck-follow-me.png" alt="Logo" onError={(e) => e.target.src = '/duck-follow-me2.png'} />
           </div>
-          <span className="pop-title">跟读鸭</span>
+          <span className="cyber-brand-text">跟读鸭</span>
         </div>
 
-        <div className="pop-actions">
+        <nav className="cyber-nav">
+          <div className={`cyber-nav-item ${activeTab === 'movie' ? 'active' : ''}`} onClick={() => setActiveTab('movie')}>影视</div>
+          <div className={`cyber-nav-item ${activeTab === 'ted' ? 'active' : ''}`} onClick={() => setActiveTab('ted')}>TED</div>
+          <div className={`cyber-nav-item ${activeTab === 'local' ? 'active' : ''}`} onClick={() => setActiveTab('local')}>本地</div>
+          <div className={`cyber-nav-item ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')}>AI陪练</div>
+        </nav>
+
+        <div className="cyber-actions">
           {currentUser ? (
-            <div className="user-badge" onClick={() => setUserMenuOpen(!userMenuOpen)}>
-              <span className="user-name">{truncateMiddle(currentUser.email, 20)}</span>
-              <span className={`membership-tag ${userProfile?.membership === 'member' ? 'pro' : 'free'}`}>
-                {userProfile?.membership === 'member' ? '会员' : '免费'}
-              </span>
+            <div className="user-badge" onClick={() => setUserMenuOpen(!userMenuOpen)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="cyber-guest">{truncateMiddle(currentUser.email, 12)}</span>
+              <div className="cyber-logo" style={{ width: '32px', height: '32px' }}>
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" />
+              </div>
               {userMenuOpen && (
-                <div className="pop-menu">
+                <div className="pop-menu" style={{ top: '60px', right: '40px' }}>
                   {userProfile?.membership !== 'member' && (
                     <button onClick={() => setMembershipOpen(true)}>💎 开通会员</button>
                   )}
@@ -148,112 +155,115 @@ export default function UploadPage() {
               )}
             </div>
           ) : (
-            <button className="primary-btn small" onClick={() => navigate('/register', { state: { mode: 'login' } })}>
-              登录 / 注册
-            </button>
+            <>
+              <span className="cyber-guest">游客模式</span>
+              <button className="cyber-login-btn" onClick={() => navigate('/register', { state: { mode: 'login' } })}>
+                登录
+              </button>
+            </>
           )}
         </div>
       </header>
 
       {/* Hero Section */}
-      <div className="pop-hero">
-        <h1 className="hero-title">
-          英语口语<br />
-          <span className="highlight">开口即大神</span>
+      <div className="cyber-hero">
+        <h1 className="cyber-hero-title">
+          你的专属英语陪练
         </h1>
-        <p className="hero-subtitle">
-          导入视频跟读，与 AI 实时对话，让你的英语脱口而出。
+        <p className="cyber-hero-subtitle">
+          不再是枯燥的学习工具，导入你最爱的 <span className="highlight">美剧</span> 或 <span className="highlight">TED演讲</span>，配合双语字幕，开启沉浸式跟读之旅。
         </p>
       </div>
 
-      {/* Main Navigation Cards */}
-      <div className="pop-grid">
-        {/* Local Upload Card */}
-        <div className={`pop-card ${activeTab === 'local' ? 'active' : ''}`} onClick={() => setActiveTab('local')}>
-          <div className="card-icon">📂</div>
-          <div className="card-content">
-            <h3>本地上传</h3>
-            <p>上传本地视频与字幕文件进行练习</p>
-          </div>
-        </div>
-
-        {/* AI Talk Card */}
-        <div className={`pop-card ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')}>
-          <div className="card-icon">🤖</div>
-          <div className="card-content">
-            <h3>AI 口语陪练</h3>
-            <p>选择话题，与 AI 进行一对一实时对话</p>
-          </div>
-        </div>
-
-        {/* TED Card (Coming Soon) */}
-        <div className={`pop-card ${activeTab === 'ted' ? 'active' : ''}`} onClick={() => setActiveTab('ted')}>
-          <div className="card-icon">🎤</div>
-          <div className="card-content">
-            <h3>TED 演讲</h3>
-            <p>跟读经典演讲，学习地道表达 (开发中)</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Content Area */}
-      <div className="pop-content-area">
+      {/* Main Content Area */}
+      <div className="cyber-content">
         {activeTab === 'local' && (
-          <div className="upload-zone">
-            <div className="file-inputs">
-              <label className="file-drop-card">
-                <input type="file" accept=".mp4,.webm,.mkv" onChange={handleVideoUpload} />
-                <div className="drop-icon">🎬</div>
-                <div className="drop-text">
-                  {videoFile ? videoFile.name : "点击或拖入视频文件"}
+          <>
+            <div className="bento-grid">
+              {/* Feature Card */}
+              <div className="bento-card bento-feature">
+                <div>
+                  <div className="feature-tag">
+                    <span>✦</span> AI DRIVEN
+                  </div>
+                  <h3 className="feature-title">沉浸式双语环境</h3>
+                  <p className="feature-desc">系统自动对齐时间轴，智能打分，就像把外教请回家。</p>
                 </div>
-                {!videoFile && <div className="drop-sub">支持 .mp4, .webm, .mkv</div>}
+                <div className="feature-visual">
+                  <div style={{ width: '24px', height: '24px', background: '#06b6d4', borderRadius: '50%' }}></div>
+                  <div className="progress-bar">
+                    <div className="progress-fill"></div>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#06b6d4' }}>95%</span>
+                </div>
+              </div>
+
+              {/* Member Card */}
+              <div className="bento-card bento-member">
+                <div className="member-content">
+                  <h3>解锁会员特权</h3>
+                  <p>无限时长，AI纠音，多端同步。</p>
+                  <button className="member-btn" onClick={() => setMembershipOpen(true)}>
+                    立即升级 <span>→</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Upload Video Card */}
+              <label className="bento-card bento-upload">
+                <input type="file" accept=".mp4,.webm,.mkv" onChange={handleVideoUpload} />
+                <div className="upload-icon-circle">
+                  📹
+                </div>
+                <h3 className="upload-title">{videoFile ? videoFile.name : "上传视频文件"}</h3>
+                <p className="upload-desc">支持 mp4, webm, mkv 格式</p>
               </label>
 
-              <label className="file-drop-card">
+              {/* Upload Subtitle Card */}
+              <label className="bento-card bento-upload">
                 <input type="file" accept=".srt,.vtt,.ass" onChange={handleSubtitleUpload} />
-                <div className="drop-icon">📝</div>
-                <div className="drop-text">
-                  {subtitleFile ? subtitleFile.name : "点击或拖入字幕文件"}
+                <div className="upload-icon-circle">
+                  📄
                 </div>
-                {!subtitleFile && <div className="drop-sub">支持 .srt, .vtt (可选)</div>}
+                <h3 className="upload-title">{subtitleFile ? subtitleFile.name : "上传字幕文件"}</h3>
+                <p className="upload-desc">支持 srt, vtt, ass 格式</p>
               </label>
             </div>
 
-            <button
-              className="primary-btn large"
-              onClick={handleStartLearning}
-              disabled={!isReady}
-            >
-              开始学习 🚀
-            </button>
-          </div>
+            <div className="start-learning-container">
+              <button
+                className="start-learning-btn"
+                onClick={handleStartLearning}
+                disabled={!isReady}
+              >
+                ▶ 开始学习之旅
+              </button>
+            </div>
+          </>
         )}
 
         {activeTab === 'ai' && (
-          <div className="ai-modes-grid">
+          <div className="bento-grid">
             {[
               { id: 'free', title: 'Free Talk', icon: '☕', desc: '自由对话，聊聊任何你想说的话题' },
               { id: 'daily', title: 'Daily Life', icon: '🏠', desc: '日常生活，讨论天气、食物、爱好等' },
               { id: 'travel', title: 'Travel', icon: '✈️', desc: '旅行场景，问路、预订酒店、机场对话' },
               { id: 'business', title: 'Business', icon: '💼', desc: '职场英语，面试、会议、商务谈判' },
             ].map(topic => (
-              <div key={topic.id} className="mode-card" onClick={() => navigate('/conversation', { state: { scenario: topic.title } })}>
-                <div className="mode-icon">{topic.icon}</div>
-                <div className="mode-info">
-                  <h4>{topic.title}</h4>
-                  <p>{topic.desc}</p>
-                </div>
+              <div key={topic.id} className="bento-card bento-upload" onClick={() => navigate('/conversation', { state: { scenario: topic.title } })}>
+                <div className="upload-icon-circle">{topic.icon}</div>
+                <h3 className="upload-title">{topic.title}</h3>
+                <p className="upload-desc">{topic.desc}</p>
               </div>
             ))}
           </div>
         )}
 
         {(activeTab === 'ted' || activeTab === 'movie') && (
-          <div className="coming-soon-state">
-            <div className="lock-icon">🔒</div>
+          <div className="coming-soon-state" style={{ padding: '100px', textAlign: 'center', color: '#fff' }}>
+            <div className="lock-icon" style={{ fontSize: '64px', marginBottom: '20px' }}>🔒</div>
             <h3>功能开发中</h3>
-            <p>我们正在努力适配该功能，敬请期待！</p>
+            <p style={{ color: '#a1a1aa' }}>我们正在努力适配该功能，敬请期待！</p>
           </div>
         )}
       </div>
