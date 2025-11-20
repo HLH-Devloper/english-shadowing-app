@@ -1219,12 +1219,14 @@ export default function ConversationPage() {
                   resize: 'none',
                   overflow: 'hidden',
                   minHeight: '24px',
-                  maxHeight: '120px',
+                  maxHeight: '200px',
                   overflowY: 'auto'
                 }}
                 onInput={(e) => {
                   e.target.style.height = 'auto'
                   e.target.style.height = e.target.scrollHeight + 'px'
+                  // Auto-scroll to bottom to show latest content
+                  e.target.scrollTop = e.target.scrollHeight
                 }}
               />
               <Timer>{formatTime(recordingTime)}</Timer>

@@ -131,9 +131,12 @@ RULES:
    - Spelling mistakes (wrong letters, typos, misspelled words)
    - Word choice errors (wrong word usage)
    - Plural/singular errors
+   - Capitalization errors
    - Any other language errors
 2. If there are MULTIPLE errors, list ALL of them in the correction part.
-3. Format for multiple errors: [Error 1: explanation] [Error 2: explanation]|||[English response]
+3. Format for multiple errors (MUST use numbered Chinese format):
+   1) "错误内容" 应该是 "正确内容"（原因）。2) "错误内容" 应该是 "正确内容"（原因）。
+   DO NOT use [Error 1:...] [Error 2:...] format. ALWAYS use numbered Chinese format.
 4. The part BEFORE ||| is for CORRECTIONS ONLY (in Chinese).
 5. The part AFTER ||| is for the CONVERSATION (in English).
 6. If there is no mistake, do NOT output |||. Just output the English response.
