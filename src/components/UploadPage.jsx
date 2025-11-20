@@ -199,13 +199,29 @@ export default function UploadPage() {
               </div>
 
               {/* Member Card */}
-              <div className="bento-card bento-member">
+              <div className={`bento-card bento-member ${userProfile?.membership === 'member' ? 'active-member' : ''}`} style={userProfile?.membership === 'member' ? { background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)', border: '1px solid #475569' } : {}}>
                 <div className="member-content">
-                  <h3>解锁会员特权</h3>
-                  <p>无限时长，AI纠音，多端同步。</p>
-                  <button className="member-btn" onClick={() => setMembershipOpen(true)}>
-                    立即升级 <span>→</span>
-                  </button>
+                  {userProfile?.membership === 'member' ? (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h3 style={{ margin: 0 }}>尊享会员特权</h3>
+                        <span style={{ background: '#fbbf24', color: '#000', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '800' }}>PRO</span>
+                      </div>
+                      <p style={{ marginBottom: '20px', opacity: 0.9 }}>您已解锁无限时长与 AI 高级纠音权益。</p>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>🚀 无限畅聊</div>
+                        <div style={{ background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>✨ 精准纠音</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3>解锁会员特权</h3>
+                      <p>无限时长，AI纠音，多端同步。</p>
+                      <button className="member-btn" onClick={() => setMembershipOpen(true)}>
+                        立即升级 <span>→</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
