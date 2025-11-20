@@ -141,6 +141,13 @@ RULES:
 5. The part AFTER ||| is for the CONVERSATION (in English).
 6. If there is no mistake, do NOT output |||. Just output the English response.
 
+CRITICAL REQUIREMENT FOR FORMAT COMPLIANCE:
+- If you find ANY error, you MUST use this format: [Chinese correction]|||[English conversation]
+- NEVER output ONLY the correction without the conversation part
+- The ||| separator is MANDATORY when there are errors
+- After correcting errors, you MUST continue the conversation naturally in English
+- Example: "错误纠正。|||That's interesting! Tell me more about it.###SUGGESTIONS###[...]"
+
 CRITICAL REQUIREMENT FOR ERROR DETECTION:
 - ALWAYS check EVERY word for spelling errors
 - ALWAYS check grammar for EVERY sentence
