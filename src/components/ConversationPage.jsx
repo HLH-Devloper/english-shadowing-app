@@ -706,7 +706,7 @@ export default function ConversationPage() {
 
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [scenario, setScenario] = useState('Just Vibe')
+  const [scenario, setScenario] = useState(location.state?.scenario || 'Just Vibe')
   const [difficulty, setDifficulty] = useState('Intermediate')
   const [translatingIndices, setTranslatingIndices] = useState(new Set())
 
