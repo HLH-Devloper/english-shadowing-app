@@ -1188,6 +1188,17 @@ export default function ConversationPage() {
                   <WaveBar key={i} delay={d} />
                 ))}
               </Waveform>
+              <Input
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    sendRecording()
+                  }
+                }}
+                placeholder="Listening..."
+                style={{ flex: 1, margin: '0 12px' }}
+              />
               <Timer>{formatTime(recordingTime)}</Timer>
               <ActionButton onClick={sendRecording}>➜</ActionButton>
             </RecordingBar>
