@@ -277,25 +277,24 @@ export default function UploadPage() {
 
         {activeTab === 'ted' && (
           <div className="bento-grid">
-            <div className="bento-card bento-upload" style={{ cursor: 'default' }}>
+            <div className="bento-card" style={{ cursor: 'default', alignItems: 'center', textAlign: 'center', justifyContent: 'center', minHeight: '200px' }}>
               <div className="upload-icon-circle">📺</div>
               <h3 className="upload-title">在线视频跟读</h3>
               <p className="upload-desc">支持 YouTube / TED 链接</p>
 
-              <div style={{ marginTop: '20px', width: '100%' }}>
+              <div style={{ marginTop: '20px', width: '100%', maxWidth: '400px' }}>
                 <input
                   type="text"
+                  className="ted-url-input"
                   placeholder="粘贴 YouTube 或 TED 视频链接..."
                   value={tedUrl}
                   onChange={(e) => setTedUrl(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #475569',
-                    background: 'rgba(0,0,0,0.2)',
-                    color: '#fff',
-                    marginBottom: '12px'
+                    marginBottom: '12px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff'
                   }}
                 />
                 <button
