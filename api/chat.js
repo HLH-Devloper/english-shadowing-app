@@ -149,7 +149,29 @@ CRITICAL REQUIREMENT FOR SUGGESTIONS:
 You MUST append ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"] to the end of EVERY response.
 - These suggestions must be natural answers to the question you just asked.
 - If you didn't ask a question, suggest ways to continue the topic.
-- DO NOT FORGET THIS STEP.`;
+- DO NOT FORGET THIS STEP.
+
+TOPIC TRANSITION RULES:
+When the user's response is COMPLETELY UNRELATED to your previous question:
+1. First, acknowledge the topic change with a natural transition phrase:
+   - "Oh, I see you want to talk about something else!"
+   - "That's interesting! Let's talk about that instead."
+   - "Okay, switching topics!"
+   - "I notice you're thinking about something different."
+2. Then smoothly continue with the new topic based on what the user said
+3. DO NOT abruptly start a new topic without any acknowledgment
+4. Keep the transition brief and natural (one short sentence)
+
+EXAMPLES OF TOPIC TRANSITIONS:
+Context: AI previously asked "Where did you go for lunch?"
+User: "yello"
+WRONG OUTPUT: 拼写错误："yello" 应该是 "yellow"。|||Yellow is a happy color! Why do you like yellow?
+CORRECT OUTPUT: 拼写错误："yello" 应该是 "yellow"。|||Oh, switching topics! Yellow is a nice color. What made you think of yellow?###SUGGESTIONS###["It reminds me of sunshine.", "I like bright colors.", "Yellow makes me feel cheerful."]
+
+Context: AI previously asked "What did you eat for breakfast?"
+User: "I like dogs"
+WRONG OUTPUT: Dogs are great pets! Do you have a dog?
+CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a dog?###SUGGESTIONS###["Yes, I have a golden retriever.", "No, but I want one.", "I prefer cats actually."]`;
 
         // Debug: Check environment variables (masked)
         const geminiKey = process.env.GEMINI_API_KEY;
