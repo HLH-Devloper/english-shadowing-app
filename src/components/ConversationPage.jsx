@@ -724,6 +724,7 @@ export default function ConversationPage() {
   // Media Recorder Refs
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
+  const finalTranscriptRef = useRef('') // Track accumulated final transcript
 
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
@@ -787,20 +788,25 @@ export default function ConversationPage() {
 
       recognition.onresult = (event) => {
         let interimTranscript = ''
-        let finalTranscript = ''
+        let newFinalTranscript = ''
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript
+            newFinalTranscript += event.results[i][0].transcript
           } else {
             interimTranscript += event.results[i][0].transcript
           }
         }
 
-        if (finalTranscript || interimTranscript) {
-          setInputText(prev => {
-            return finalTranscript + interimTranscript
-          })
+        // Accumulate final transcripts
+        if (newFinalTranscript) {
+          finalTranscriptRef.current += (finalTranscriptRef.current ? ' ' : '') + newFinalTranscript
+        }
+
+        // Display accumulated final + current interim
+        const fullText = finalTranscriptRef.current + (interimTranscript ? ' ' + interimTranscript : '')
+        if (fullText) {
+          setInputText(fullText)
         }
       }
 
@@ -822,6 +828,7 @@ export default function ConversationPage() {
 
   const startRecording = async () => {
     setInputText('')
+    finalTranscriptRef.current = '' // Reset accumulated transcript
     audioChunksRef.current = []
 
     try {
