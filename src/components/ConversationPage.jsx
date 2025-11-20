@@ -1023,7 +1023,7 @@ export default function ConversationPage() {
 
       const fullReply = data.reply || "Sorry, I couldn't understand that."
 
-      // Parse Suggestions
+      // Parse Suggestions - handle various formats
       let conversationContent = fullReply
       const suggestionSplit = fullReply.split('###SUGGESTIONS###')
       if (suggestionSplit.length > 1) {
@@ -1036,6 +1036,10 @@ export default function ConversationPage() {
         } catch (e) {
           console.error('Failed to parse suggestions:', e)
         }
+      } else {
+        // Handle incomplete suggestion markers (e.g., ###SUGGEST, ###SUG)
+        // Remove any trailing incomplete markers
+        conversationContent = conversationContent.replace(/###[A-Z]*$/i, '').trim()
       }
 
       const parts = conversationContent.split('|||')
@@ -1045,20 +1049,37 @@ export default function ConversationPage() {
       if (parts.length > 1) {
         correction = parts[0].trim()
         conversation = parts[1].trim()
+      } else if (conversationContent.includes('应该') || conversationContent.includes('错误')) {
+        // If there's no ||| but content looks like correction (contains Chinese correction keywords)
+        // This means AI forgot to add conversation part
+        correction = conversationContent
+        conversation = '' // No conversation provided
       }
 
       const aiMsgId = Date.now().toString() + '-ai'
 
       setSpeakingMsgId(aiMsgId)
 
-      setMessages(prev => [...prev, {
-        id: aiMsgId,
-        role: 'ai',
-        text: conversation,
-        correction: correction
-      }])
-
-      speakText(conversation, aiMsgId)
+      // Only add message if there's actual conversation content
+      if (conversation) {
+        setMessages(prev => [...prev, {
+          id: aiMsgId,
+          role: 'ai',
+          text: conversation,
+          correction: correction
+        }])
+        speakText(conversation, aiMsgId)
+      } else if (correction) {
+        // If only correction exists, show a generic follow-up
+        const followUp = "Let's continue practicing. What would you like to talk about?"
+        setMessages(prev => [...prev, {
+          id: aiMsgId,
+          role: 'ai',
+          text: followUp,
+          correction: correction
+        }])
+        speakText(followUp, aiMsgId)
+      }
     } catch (error) {
       console.error('Chat error:', error)
 
