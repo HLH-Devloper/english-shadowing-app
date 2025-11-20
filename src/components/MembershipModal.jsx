@@ -13,14 +13,14 @@ export default function MembershipModal({ isOpen, onClose }) {
       <div className="app-modal" style={{ maxWidth: 520 }}>
         <div className="app-modal-title">💎 会员即将上线，敬请期待</div>
         <div className="app-modal-message" style={{ whiteSpace: 'pre-line' }}>
-{`我们正在为您打磨更强大的学习体验：
+          {`我们正在为您打磨更强大的学习体验：
 ✅ 无限制视频观看
 ✅ 专属学习内容
 ✅ 高级发音评分
 ✅ 离线下载功能
 
 现在可抢先了解并获得上线提醒：
-👉 在小红书搜索「跟读鸭（英语口语学习）」
+👉 在小红书搜索「小鸭慢慢学」
 👉 关注获取最新上线通知和早期优惠`}
         </div>
         <div className="app-modal-actions">
