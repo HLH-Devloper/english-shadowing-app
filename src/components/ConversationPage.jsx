@@ -720,6 +720,7 @@ export default function ConversationPage() {
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
   const timerRef = useRef(null)
+  const recordingTextareaRef = useRef(null) // Ref for recording textarea
 
   // Media Recorder Refs
   const mediaRecorderRef = useRef(null)
@@ -780,6 +781,10 @@ export default function ConversationPage() {
         timerRef.current = setInterval(() => {
           setRecordingTime(prev => prev + 1)
         }, 1000)
+        // Auto-focus textarea so user can press Enter immediately
+        setTimeout(() => {
+          recordingTextareaRef.current?.focus()
+        }, 100)
       }
 
       recognition.onend = () => {
@@ -807,6 +812,10 @@ export default function ConversationPage() {
         const fullText = finalTranscriptRef.current + (interimTranscript ? ' ' + interimTranscript : '')
         if (fullText) {
           setInputText(fullText)
+          // Keep focus on textarea for immediate Enter key sending
+          setTimeout(() => {
+            recordingTextareaRef.current?.focus()
+          }, 0)
         }
       }
 
@@ -1196,6 +1205,7 @@ export default function ConversationPage() {
                 ))}
               </Waveform>
               <textarea
+                ref={recordingTextareaRef}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => {
