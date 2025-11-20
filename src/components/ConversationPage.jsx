@@ -1049,8 +1049,15 @@ export default function ConversationPage() {
       if (parts.length > 1) {
         correction = parts[0].trim()
         conversation = parts[1].trim()
-      } else if (conversationContent.includes('应该') || conversationContent.includes('错误')) {
-        // If there's no ||| but content looks like correction (contains Chinese correction keywords)
+      } else if (
+        conversationContent.includes('应该') ||
+        conversationContent.includes('错误') ||
+        conversationContent.includes('改为') ||
+        conversationContent.includes('正确') ||
+        conversationContent.includes('拼写') ||
+        conversationContent.match(/\d+\)/) // Matches numbered format like "1) 2)"
+      ) {
+        // If there's no ||| but content looks like correction
         // This means AI forgot to add conversation part
         correction = conversationContent
         conversation = '' // No conversation provided
