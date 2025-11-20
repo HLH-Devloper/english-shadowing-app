@@ -694,6 +694,7 @@ const DIFFICULTIES = [
 
 export default function ConversationPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [theme, setTheme] = useState(techTheme)
   const [messages, setMessages] = useState([
     { id: 'init', role: 'ai', text: "Hello! I'm your AI English tutor. What would you like to talk about today?" }
@@ -713,7 +714,7 @@ export default function ConversationPage() {
   const [suggestions, setSuggestions] = useState([])
 
   // Chat History State
-  const location = useLocation()
+  // location moved to top
   const [sessionId, setSessionId] = useState(location.state?.sessionId || null)
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false)
 
