@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import styled, { keyframes, css, ThemeProvider } from 'styled-components'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
+import { ChatHistoryService } from '../services/chatService'
 import Toast from './Toast'
 
 // --- Themes ---
@@ -708,7 +709,13 @@ export default function ConversationPage() {
   const [scenario, setScenario] = useState('Just Vibe')
   const [difficulty, setDifficulty] = useState('Intermediate')
   const [translatingIndices, setTranslatingIndices] = useState(new Set())
+
   const [suggestions, setSuggestions] = useState([])
+
+  // Chat History State
+  const location = useLocation()
+  const [sessionId, setSessionId] = useState(location.state?.sessionId || null)
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false)
 
   // Speaking State
   const [speakingMsgId, setSpeakingMsgId] = useState(null)
@@ -757,6 +764,57 @@ export default function ConversationPage() {
     })
     return () => unsub()
   }, [])
+
+  // Load History if sessionId exists
+  useEffect(() => {
+    if (sessionId && !isHistoryLoaded) {
+      const loadHistory = async () => {
+        try {
+          const data = await ChatHistoryService.getConversationById(sessionId)
+          if (data) {
+            setMessages(data.messages || [])
+            setScenario(data.scenario || 'Just Vibe')
+            setDifficulty(data.difficulty || 'Intermediate')
+            setIsHistoryLoaded(true)
+          }
+        } catch (error) {
+          console.error('Failed to load history:', error)
+          showNotice('Failed to load chat history', 'error')
+        }
+      }
+      loadHistory()
+    }
+  }, [sessionId, isHistoryLoaded])
+
+  // Auto-save Chat History
+  useEffect(() => {
+    // Don't save if history is loading or if it's just the initial message
+    if (messages.length <= 1 && !sessionId) return
+
+    const saveTimeout = setTimeout(async () => {
+      const user = auth.currentUser
+      if (!user) return
+
+      try {
+        const conversationData = {
+          scenario,
+          difficulty,
+          title: `${scenario} (${new Date().toLocaleDateString()})`,
+          messages,
+          isActive: true
+        }
+
+        const id = await ChatHistoryService.saveConversation(user.uid, conversationData, sessionId)
+        if (!sessionId) {
+          setSessionId(id)
+        }
+      } catch (error) {
+        console.error('Failed to save chat history:', error)
+      }
+    }, 2000) // Debounce 2s
+
+    return () => clearTimeout(saveTimeout)
+  }, [messages, scenario, difficulty, sessionId])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -1305,6 +1363,13 @@ export default function ConversationPage() {
             <SidebarTitle>Settings</SidebarTitle>
             <IconButton onClick={() => setIsSettingsOpen(false)}>✕</IconButton>
           </SidebarHeader>
+
+          <Section>
+            <OptionButton onClick={() => navigate('/history')}>
+              <OptionContent><Icon>📜</Icon> Chat History</OptionContent>
+              <Icon>→</Icon>
+            </OptionButton>
+          </Section>
 
           <Section>
             <SectionTitle>VIBE CHECK (THEME)</SectionTitle>
