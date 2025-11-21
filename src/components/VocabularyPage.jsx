@@ -60,38 +60,48 @@ export default function VocabularyPage() {
     const [currentCardIndex, setCurrentCardIndex] = useState(0)
     const [isFlipped, setIsFlipped] = useState(false)
     const [reviewQueue, setReviewQueue] = useState([])
+    const [reviewMode, setReviewMode] = useState('due') // 'due' | 'all'
 
     useEffect(() => {
         if (activeTab === 'flashcard') {
-            const now = new Date()
-            // 筛选需要复习的单词：nextReview <= now 或 masteryLevel 为 0
-            const dueWords = words.filter(w => {
-                if (!w.nextReview) return true // 兼容旧数据
-                // Firestore Timestamp 转 Date
-                const reviewDate = w.nextReview.toDate ? w.nextReview.toDate() : new Date(w.nextReview)
-                return reviewDate <= now
-            })
+            let queue = []
+            if (reviewMode === 'all') {
+                // Review All: Shuffle all words
+                queue = [...words].sort(() => Math.random() - 0.5)
+            } else {
+                // Review Due: Filter by date
+                const now = new Date()
+                const dueWords = words.filter(w => {
+                    if (!w.nextReview) return true // 兼容旧数据
+                    // Firestore Timestamp 转 Date
+                    const reviewDate = w.nextReview.toDate ? w.nextReview.toDate() : new Date(w.nextReview)
+                    return reviewDate <= now
+                })
 
-            // 按复习时间排序（越早过期的越先复习）
-            const queue = dueWords.sort((a, b) => {
-                const dateA = a.nextReview?.toDate ? a.nextReview.toDate() : new Date(a.nextReview || 0)
-                const dateB = b.nextReview?.toDate ? b.nextReview.toDate() : new Date(b.nextReview || 0)
-                return dateA - dateB
-            })
+                // 按复习时间排序（越早过期的越先复习）
+                queue = dueWords.sort((a, b) => {
+                    const dateA = a.nextReview?.toDate ? a.nextReview.toDate() : new Date(a.nextReview || 0)
+                    const dateB = b.nextReview?.toDate ? b.nextReview.toDate() : new Date(b.nextReview || 0)
+                    return dateA - dateB
+                })
+            }
 
             setReviewQueue(queue)
             setCurrentCardIndex(0)
             setIsFlipped(false)
         }
-    }, [activeTab])
+    }, [activeTab, reviewMode]) // words is in closure, but adding it to deps might cause loops if not careful. words only changes on load/delete/update. update changes words, which triggers this.
+    // If update changes words, we might reset the queue mid-review if we include words in deps.
+    // Actually, we WANT to update the queue if a word is updated (e.g. mastery level changes).
+    // BUT, if we reset the queue, we lose progress?
+    // No, `loadWords` sets `words`. `handleMasteryUpdate` sets `words`.
+    // If `handleMasteryUpdate` runs, `words` changes. `useEffect` runs. `reviewQueue` is re-calculated. `currentCardIndex` resets to 0.
+    // THIS IS BAD. We shouldn't reset `currentCardIndex` when `words` updates during a review session.
+    // The previous code didn't have `words` in deps. It only ran on `activeTab` change.
+    // So `reviewQueue` was static during the session.
+    // I should keep it that way. `reviewQueue` is initialized when entering the tab or changing mode.
+    // So I will NOT include `words` in deps.
 
-    const startReviewAll = () => {
-        // 强制复习所有单词，乱序
-        const queue = [...words].sort(() => Math.random() - 0.5)
-        setReviewQueue(queue)
-        setCurrentCardIndex(0)
-        setIsFlipped(false)
-    }
 
     const handleMasteryUpdate = async (isRemembered) => {
         if (!currentUser || reviewQueue.length === 0) return
@@ -255,14 +265,51 @@ export default function VocabularyPage() {
 
                         {activeTab === 'flashcard' && (
                             <div className="flashcard-container" style={{ height: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                                    <button
+                                        onClick={() => setReviewMode('due')}
+                                        style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            border: '1px solid #334155',
+                                            background: reviewMode === 'due' ? '#3b82f6' : 'rgba(30, 41, 59, 0.5)',
+                                            color: '#fff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >智能复习</button>
+                                    <button
+                                        onClick={() => setReviewMode('all')}
+                                        style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            border: '1px solid #334155',
+                                            background: reviewMode === 'all' ? '#06b6d4' : 'rgba(30, 41, 59, 0.5)',
+                                            color: '#fff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >复习全部</button>
+                                </div>
+
                                 {reviewQueue.length === 0 ? (
                                     <div style={{ textAlign: 'center', color: '#fff' }}>
-                                        <h3>🎉 现在没有需要复习的单词</h3>
-                                        <p style={{ color: '#94a3b8', marginBottom: '20px' }}>休息一下，或者...</p>
-                                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                            <button className="secondary-btn" onClick={() => setActiveTab('list')}>查看列表</button>
-                                            <button className="primary-btn" onClick={startReviewAll}>复习所有 ({words.length})</button>
-                                        </div>
+                                        {reviewMode === 'due' ? (
+                                            <>
+                                                <h3>🎉 现在没有需要复习的单词</h3>
+                                                <p style={{ color: '#94a3b8', marginBottom: '20px' }}>休息一下，或者...</p>
+                                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                                    <button className="secondary-btn" onClick={() => setActiveTab('list')}>查看列表</button>
+                                                    <button className="primary-btn" onClick={() => setReviewMode('all')}>复习所有 ({words.length})</button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <h3>📚 生词本是空的</h3>
+                                                <p style={{ color: '#94a3b8', marginBottom: '20px' }}>快去添加一些生词吧！</p>
+                                                <button className="secondary-btn" onClick={() => setActiveTab('list')}>查看列表</button>
+                                            </>
+                                        )}
                                     </div>
                                 ) : (
                                     <>
