@@ -12,7 +12,18 @@ export default async function handler(req, res) {
     }
 
     try {
-        const info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${videoId}`);
+        const agentOptions = {};
+        if (process.env.YOUTUBE_COOKIES) {
+            try {
+                const cookies = JSON.parse(process.env.YOUTUBE_COOKIES);
+                const agent = ytdl.createAgent(cookies);
+                agentOptions.agent = agent;
+            } catch (e) {
+                console.warn('Failed to parse YOUTUBE_COOKIES:', e);
+            }
+        }
+
+        const info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${videoId}`, agentOptions);
         const playerResponse = info.player_response;
 
         if (!playerResponse || !playerResponse.captions) {
