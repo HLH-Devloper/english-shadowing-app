@@ -375,9 +375,32 @@ export default function VocabularyPage() {
                                                 ) : (
                                                     <>
                                                         <h3 style={{ color: '#fff', marginBottom: '10px' }}>{reviewQueue[currentCardIndex].definition}</h3>
+
+                                                        {/* Subtitle Context */}
                                                         {reviewQueue[currentCardIndex].context && (
-                                                            <div style={{ marginTop: '20px', fontStyle: 'italic', color: '#cbd5e1' }}>
-                                                                "{reviewQueue[currentCardIndex].context.original}"
+                                                            <div style={{ marginTop: '15px', width: '100%', padding: '0 10px' }}>
+                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>视频原句</div>
+                                                                <div style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '4px' }}>
+                                                                    "{reviewQueue[currentCardIndex].context.original}"
+                                                                </div>
+                                                                {reviewQueue[currentCardIndex].context.translation && (
+                                                                    <div style={{ fontSize: '14px', color: '#94a3b8' }}>
+                                                                        {reviewQueue[currentCardIndex].context.translation}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Dictionary Example */}
+                                                        {reviewQueue[currentCardIndex].example && (
+                                                            <div style={{ marginTop: '15px', width: '100%', padding: '0 10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>词典例句</div>
+                                                                <div style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '4px' }}>
+                                                                    {reviewQueue[currentCardIndex].example.en}
+                                                                </div>
+                                                                <div style={{ fontSize: '14px', color: '#94a3b8' }}>
+                                                                    {reviewQueue[currentCardIndex].example.zh || reviewQueue[currentCardIndex].example.cn}
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </>
