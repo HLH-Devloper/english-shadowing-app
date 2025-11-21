@@ -62,14 +62,35 @@ export default function VocabularyPage() {
 
     useEffect(() => {
         if (activeTab === 'flashcard') {
-            // 简单的复习队列：优先复习 masteryLevel 低的，或者 nextReview 时间到的（这里简化为所有词随机乱序）
-            // 实际生产环境应使用更复杂的算法
-            const queue = [...words].sort(() => Math.random() - 0.5)
+            const now = new Date()
+            // 筛选需要复习的单词：nextReview <= now 或 masteryLevel 为 0
+            const dueWords = words.filter(w => {
+                if (!w.nextReview) return true // 兼容旧数据
+                // Firestore Timestamp 转 Date
+                const reviewDate = w.nextReview.toDate ? w.nextReview.toDate() : new Date(w.nextReview)
+                return reviewDate <= now
+            })
+
+            // 按复习时间排序（越早过期的越先复习）
+            const queue = dueWords.sort((a, b) => {
+                const dateA = a.nextReview?.toDate ? a.nextReview.toDate() : new Date(a.nextReview || 0)
+                const dateB = b.nextReview?.toDate ? b.nextReview.toDate() : new Date(b.nextReview || 0)
+                return dateA - dateB
+            })
+
             setReviewQueue(queue)
             setCurrentCardIndex(0)
             setIsFlipped(false)
         }
     }, [activeTab])
+
+    const startReviewAll = () => {
+        // 强制复习所有单词，乱序
+        const queue = [...words].sort(() => Math.random() - 0.5)
+        setReviewQueue(queue)
+        setCurrentCardIndex(0)
+        setIsFlipped(false)
+    }
 
     const handleMasteryUpdate = async (isRemembered) => {
         if (!currentUser || reviewQueue.length === 0) return
@@ -179,8 +200,12 @@ export default function VocabularyPage() {
                             <div className="flashcard-container" style={{ height: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 {reviewQueue.length === 0 ? (
                                     <div style={{ textAlign: 'center', color: '#fff' }}>
-                                        <h3>没有需要复习的单词</h3>
-                                        <button className="primary-btn" onClick={() => setActiveTab('list')} style={{ marginTop: '20px' }}>查看列表</button>
+                                        <h3>🎉 现在没有需要复习的单词</h3>
+                                        <p style={{ color: '#94a3b8', marginBottom: '20px' }}>休息一下，或者...</p>
+                                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                            <button className="secondary-btn" onClick={() => setActiveTab('list')}>查看列表</button>
+                                            <button className="primary-btn" onClick={startReviewAll}>复习所有 ({words.length})</button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <>

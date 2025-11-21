@@ -5,6 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { ChatHistoryService } from '../services/chatService'
+import { VocabularyService } from '../services/VocabularyService'
 import Toast from './Toast'
 
 // --- Themes ---
@@ -294,6 +295,23 @@ const TranslateBtn = styled.button`
 `
 
 const ReplayBtn = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.role === 'user' ? 'rgba(255,255,255,0.8)' : props.theme.accent};
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all 0.2s;
+  
+  &:hover { opacity: 1; transform: scale(1.1); }
+`
+
+const SaveBtn = styled.button`
   background: none;
   border: none;
   color: ${props => props.role === 'user' ? 'rgba(255,255,255,0.8)' : props.theme.accent};
@@ -723,6 +741,11 @@ export default function ConversationPage() {
 
   // Membership State
   const [isMember, setIsMember] = useState(null) // null = loading, false = not member, true = member
+
+  // Save Word Modal State
+  const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const [saveWordData, setSaveWordData] = useState({ word: '', definition: '', context: '' })
+  const [isSaving, setIsSaving] = useState(false)
 
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
@@ -1204,66 +1227,69 @@ export default function ConversationPage() {
         )}
 
         <Header>
-          <IconButton onClick={() => navigate('/')}>←</IconButton>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Title>AI Talk</Title>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <IconButton onClick={() => navigate('/')}>
+              <span style={{ fontSize: '1.2rem' }}>⬅</span>
+            </IconButton>
+            <Title>AI Tutor</Title>
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <ModeBadge>MODE: {scenario.toUpperCase()}</ModeBadge>
-            <IconButton onClick={() => setIsSettingsOpen(true)} title="Settings">
-              ⚙️
+            <ModeBadge>{scenario}</ModeBadge>
+            <IconButton onClick={() => setIsSettingsOpen(true)}>
+              <span style={{ fontSize: '1.2rem' }}>⚙️</span>
             </IconButton>
           </div>
         </Header>
 
-        <ChatArea>
+        <ChatArea ref={chatAreaRef}>
           {messages.map((msg, index) => (
-            <BubbleWrapper key={index} role={msg.role}>
-              <RoleLabel role={msg.role}>{msg.role === 'ai' ? 'AI Tutor' : 'You'}</RoleLabel>
-
+            <BubbleWrapper key={msg.id} role={msg.role}>
+              <RoleLabel role={msg.role}>{msg.role === 'user' ? 'You' : 'AI Tutor'}</RoleLabel>
               {msg.correction && (
                 <CorrectionBubble>
-                  <strong>💡 Correction:</strong><br />
+                  <div style={{ fontWeight: 'bold', marginBottom: '4px', color: theme.accent }}>Correction:</div>
                   {msg.correction}
                 </CorrectionBubble>
               )}
-
               <Bubble role={msg.role}>
-                {/* Blur Overlay for AI messages being spoken */}
                 {msg.role === 'ai' && speakingMsgId === msg.id && (
                   <BlurOverlay>
-                    <LoadingDots style={{ color: theme.id === 'tech' ? '#fff' : '#000', fontWeight: 'bold' }}>Speaking</LoadingDots>
+                    <LoadingDots style={{ fontSize: '2rem', color: theme.accent }} />
                   </BlurOverlay>
                 )}
-
                 {msg.text}
 
-                {/* Audio Replay Button */}
-                <ReplayBtn
-                  role={msg.role}
-                  onClick={(e) => { e.stopPropagation(); speakText(msg.text, null, msg.audioUrl) }}
-                  title="Play Audio"
-                >
-                  🔊
-                </ReplayBtn>
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', alignItems: 'center' }}>
+                  {msg.role === 'ai' && (
+                    <TranslateBtn onClick={() => toggleTranslation(index)}>
+                      {translatingIndices.has(index) ? 'Hide' : 'Translate'}
+                    </TranslateBtn>
+                  )}
 
-                {msg.role === 'ai' && (
+                  <ReplayBtn
+                    role={msg.role}
+                    onClick={() => speakMessage(msg.text, msg.id)}
+                    title="Play Audio"
+                  >
+                    🔊
+                  </ReplayBtn>
+
+                  <SaveBtn
+                    role={msg.role}
+                    onClick={() => handleSaveClick(msg)}
+                    title="Save to Vocabulary"
+                  >
+                    💾
+                  </SaveBtn>
+                </div>
+
+                {translatingIndices.has(index) && (
                   <>
-                    {msg.translation && (
-                      <>
-                        <TranslationDivider />
-                        <TranslationText>{msg.translation}</TranslationText>
-                      </>
-                    )}
-                    {!msg.translation && (
-                      <TranslateBtn onClick={() => handleTranslate(index, msg.text)}>
-                        {translatingIndices.has(index) ? (
-                          <span>Translating<LoadingDots /></span>
-                        ) : (
-                          '文/A Translate'
-                        )}
-                      </TranslateBtn>
-                    )}
+                    <TranslationDivider />
+                    <TranslationText>
+                      {msg.translation || 'Translating...'}
+                    </TranslationText>
                   </>
                 )}
               </Bubble>
@@ -1271,6 +1297,81 @@ export default function ConversationPage() {
           ))}
           <div ref={messagesEndRef} />
         </ChatArea>
+
+        {/* Save Word Modal */}
+        {saveModalOpen && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }} onClick={() => setSaveModalOpen(false)}>
+            <div style={{
+              background: theme.cardBg, padding: '24px', borderRadius: '16px',
+              width: '90%', maxWidth: '400px', border: theme.border,
+              boxShadow: theme.shadow
+            }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ margin: '0 0 16px 0', color: theme.text }}>收藏生词</h3>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: theme.textSecondary, fontSize: '0.9rem' }}>单词 / 短语</label>
+                <input
+                  autoFocus
+                  value={saveWordData.word}
+                  onChange={e => setSaveWordData({ ...saveWordData, word: e.target.value })}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '8px',
+                    border: theme.border, background: theme.inputBg, color: theme.text,
+                    outline: 'none'
+                  }}
+                  placeholder="输入想收藏的单词..."
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: theme.textSecondary, fontSize: '0.9rem' }}>释义 (可选)</label>
+                <input
+                  value={saveWordData.definition}
+                  onChange={e => setSaveWordData({ ...saveWordData, definition: e.target.value })}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '8px',
+                    border: theme.border, background: theme.inputBg, color: theme.text,
+                    outline: 'none'
+                  }}
+                  placeholder="输入中文释义..."
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: theme.textSecondary, fontSize: '0.9rem' }}>来源句子</label>
+                <div style={{
+                  padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.1)',
+                  color: theme.textSecondary, fontSize: '0.9rem', fontStyle: 'italic'
+                }}>
+                  "{saveWordData.context}"
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setSaveModalOpen(false)}
+                  style={{
+                    padding: '8px 16px', borderRadius: '8px', border: 'none',
+                    background: 'rgba(0,0,0,0.1)', color: theme.text, cursor: 'pointer'
+                  }}
+                >取消</button>
+                <button
+                  onClick={handleConfirmSave}
+                  disabled={isSaving}
+                  style={{
+                    padding: '8px 20px', borderRadius: '8px', border: 'none',
+                    background: theme.accent, color: '#fff', cursor: 'pointer',
+                    opacity: isSaving ? 0.7 : 1
+                  }}
+                >{isSaving ? '保存中...' : '保存'}</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Controls>
           {suggestions.length > 0 && (
