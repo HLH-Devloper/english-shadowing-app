@@ -12,6 +12,7 @@ export default function VocabularyPage() {
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('list') // list | flashcard
     const [filterType, setFilterType] = useState('all') // all | word | sentence
+    const [showRules, setShowRules] = useState(false)
     const [toastMsg, setToastMsg] = useState('')
     const [toastType, setToastType] = useState('info')
 
@@ -156,7 +157,12 @@ export default function VocabularyPage() {
                     <div className={`cyber-nav-item ${activeTab === 'list' ? 'active' : ''}`} onClick={() => setActiveTab('list')}>单词列表</div>
                     <div className={`cyber-nav-item ${activeTab === 'flashcard' ? 'active' : ''}`} onClick={() => setActiveTab('flashcard')}>卡片复习</div>
                 </div>
-                <div className="cyber-actions">
+                <div className="cyber-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button
+                        onClick={() => setShowRules(true)}
+                        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '50%', width: '24px', height: '24px', color: '#fff', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="复习规则"
+                    >?</button>
                     <span className="cyber-guest">共 {words.length} 个生词</span>
                 </div>
             </header>
@@ -401,6 +407,72 @@ export default function VocabularyPage() {
                     </>
                 )}
             </div>
+            {showRules && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', zIndex: 200,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(5px)'
+                }} onClick={() => setShowRules(false)}>
+                    <div style={{
+                        background: '#1e293b', border: '1px solid #334155', borderRadius: '16px',
+                        padding: '30px', maxWidth: '500px', width: '90%', color: '#fff',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                        position: 'relative'
+                    }} onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setShowRules(false)}
+                            style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}
+                        >×</button>
+
+                        <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            🧠 记忆法则说明
+                        </h2>
+
+                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
+                            我们使用<b>间隔重复系统 (SRS)</b> 来帮助你高效记忆。系统会根据你的掌握程度，智能安排下次复习时间：
+                        </p>
+
+                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', margin: '20px 0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                                <span style={{ color: '#94a3b8' }}>Level 0 (新词)</span>
+                                <span style={{ color: '#fff' }}>立即复习</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                                <span style={{ color: '#94a3b8' }}>Level 1 (初识)</span>
+                                <span style={{ color: '#fff' }}>1天后</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                                <span style={{ color: '#94a3b8' }}>Level 2 (熟悉)</span>
+                                <span style={{ color: '#fff' }}>3天后</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                                <span style={{ color: '#94a3b8' }}>Level 3 (掌握)</span>
+                                <span style={{ color: '#fff' }}>7天后</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                                <span style={{ color: '#94a3b8' }}>Level 4 (牢记)</span>
+                                <span style={{ color: '#fff' }}>14天后</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                                <span style={{ color: '#94a3b8' }}>Level 5 (永久)</span>
+                                <span style={{ color: '#fff' }}>30天后</span>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#94a3b8' }}>
+                            <div style={{ flex: 1, padding: '10px', border: '1px solid #334155', borderRadius: '8px' }}>
+                                <strong style={{ color: '#22c55e', display: 'block', marginBottom: '5px' }}>😎 记住了</strong>
+                                等级 +1，复习间隔变长
+                            </div>
+                            <div style={{ flex: 1, padding: '10px', border: '1px solid #334155', borderRadius: '8px' }}>
+                                <strong style={{ color: '#ef4444', display: 'block', marginBottom: '5px' }}>😵 模糊</strong>
+                                等级 -1，复习间隔变短
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
         </section >
     )
