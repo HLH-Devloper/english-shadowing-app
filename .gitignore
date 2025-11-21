@@ -3,3 +3,4 @@ dist/
 .env.local
 .env
 *.log
+*-player-script.js

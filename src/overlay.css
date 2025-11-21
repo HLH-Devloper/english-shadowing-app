@@ -7,7 +7,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0; /* 移除上下黑边，让视频区域更大 */
+  padding: 0;
+  /* 移除上下黑边，让视频区域更大 */
 }
 
 /* 顶部控件覆盖在视频上方，带渐变背景，保持清晰 */
@@ -58,19 +59,23 @@
   transform: translateX(-50%);
   text-align: center;
   z-index: 5;
-  pointer-events: auto; /* 允许点击字幕词 */
+  pointer-events: auto;
+  /* 允许点击字幕词 */
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 92%; /* 字幕宽度不超出视频画布，避免“字幕比屏幕大” */
+  max-width: 92%;
+  /* 字幕宽度不超出视频画布，避免“字幕比屏幕大” */
 }
 
 .subtitle-overlay-original {
   display: block;
-  white-space: normal; /* 长句时均衡换行，避免左右不齐 */
+  white-space: normal;
+  /* 长句时均衡换行，避免左右不齐 */
   text-wrap: balance;
   max-width: 100%;
-  font-size: clamp(16px, 2.2vw, 26px); /* 在不同屏幕下自适应字号 */
+  font-size: clamp(16px, 2.2vw, 26px);
+  /* 在不同屏幕下自适应字号 */
 }
 
 .subtitle-overlay-translation {
@@ -92,48 +97,254 @@
   object-fit: contain;
 }
 
-/* 词典浮窗：固定在视频画布右下角，样式与滚动条优化 */
+/* 词典浮窗：Cyberpunk 风格重构 */
 .dict-popup {
   position: absolute;
   right: 24px;
-  bottom: 80px; /* 为字幕与底部控制条留出空间 */
-  max-width: 360px;
-  max-height: 55%; /* 相对于视频容器高度 */
-  overflow: auto;
-  background: #ffffff; /* 白底卡片 */
-  color: #111111; /* 主体深色文字 */
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24); /* 较柔和阴影 */
-  backdrop-filter: blur(3px);
-  z-index: 11; /* 高于字幕与中央按钮 */
+  bottom: 80px;
+  width: 340px;
+  max-height: 60%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.95);
+  /* 深色背景 */
+  color: #f8fafc;
+  padding: 0;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+  animation: popupSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 滚动条尽量低调 */
-.dict-popup::-webkit-scrollbar { width: 6px; height: 6px; }
-.dict-popup::-webkit-scrollbar-track { background: transparent; }
-.dict-popup::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); border-radius: 4px; }
-.dict-popup { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.18) transparent; }
+@keyframes popupSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
 
-/* 词典浮窗内部排版 */
-.dict-popup-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-.dict-popup-title { font-size: 21px; font-weight: 700; line-height: 1.3; color: #111111; }
-.dict-popup-phonetic { font-size: 16px; color: #555555; font-weight: 600; }
-.dict-popup-phonetic-row { display: flex; align-items: center; gap: 8px; }
-.dict-ipa-label { color: #555555; font-weight: 700; }
-.dict-ipa { color: #555555; }
-.dict-speak-btn { appearance: none; border: none; background: transparent; color: #666666; width: 28px; height: 28px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-.dict-speak-btn:hover { background: rgba(0,0,0,0.06); color: #333333; }
-.dict-speak-btn:disabled { color: #bbbbbb; cursor: not-allowed; }
-.dict-speak-icon { width: 16px; height: 16px; display: block; }
-.dict-popup-tip { font-size: 12px; color: #888888; margin-top: 4px; }
-.dict-popup-loading { opacity: 0.9; margin-bottom: 6px; }
-.dict-popup-list { display: grid; gap: 6px; }
-.dict-popup-list-item { line-height: 1.6; font-size: 14.5px; color: #333333; }
-.dict-popup-empty { opacity: 0.9; }
-.dict-popup-subtitle { font-size: 13px; margin-bottom: 4px; font-weight: 700; color: #111111; }
-.dict-popup-example { margin-bottom: 6px; }
-.dict-popup-example-en { font-weight: 600; color: #111111; }
-.dict-popup-example-zh { color: #555555; }
-.dict-popup-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 10px; }
-.dict-popup-link { color: #2563EB; text-decoration: none; }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 顶部关闭按钮 */
+.dict-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 50%;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.dict-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+/* 头部区域 */
+.dict-popup-header {
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.02), transparent);
+}
+
+.dict-popup-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dict-popup-phonetic {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.dict-phonetic-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dict-ipa-label {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.dict-ipa {
+  font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif;
+  color: #cbd5e1;
+}
+
+.dict-speak-btn {
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.dict-speak-btn:hover {
+  opacity: 1;
+  color: #60a5fa;
+}
+
+.dict-speak-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* 内容区域 */
+.dict-popup-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.dict-popup-loading {
+  color: #94a3b8;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dict-popup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dict-popup-list-item {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #e2e8f0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dict-pos-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a855f7;
+  /* Purple accent */
+  background: rgba(168, 85, 247, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.dict-def-text {
+  color: #e2e8f0;
+}
+
+.dict-popup-empty {
+  color: #64748b;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* 底部操作栏 */
+.dict-popup-actions {
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dict-link-btn {
+  font-size: 13px;
+  color: #94a3b8;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.dict-link-btn:hover {
+  color: #3b82f6;
+}
+
+.dict-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s;
+}
+
+.dict-save-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+  filter: brightness(1.1);
+}
+
+.dict-save-btn:active {
+  transform: translateY(0);
+}
+
+.dict-save-btn:disabled {
+  background: #334155;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* 滚动条美化 */
+.dict-popup-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dict-popup-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dict-popup-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.dict-popup-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
