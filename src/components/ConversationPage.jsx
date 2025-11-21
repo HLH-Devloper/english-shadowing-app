@@ -1195,6 +1195,52 @@ export default function ConversationPage() {
     }
   }
 
+  const handleSaveClick = (msg) => {
+    setSaveWordData({
+      word: '',
+      definition: '',
+      context: msg.text
+    })
+    setSaveModalOpen(true)
+  }
+
+  const handleConfirmSave = async () => {
+    if (!saveWordData.word.trim()) {
+      showNotice('请输入单词', 'warning')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        showNotice('请先登录', 'error')
+        return
+      }
+
+      const result = await VocabularyService.addWord(user.uid, {
+        word: saveWordData.word.trim(),
+        definition: saveWordData.definition.trim(),
+        context: {
+          original: saveWordData.context,
+          translation: ''
+        },
+        source: 'AI Chat'
+      })
+
+      if (result.success) {
+        showNotice(result.message, 'success')
+        setSaveModalOpen(false)
+      } else {
+        showNotice(result.message, 'info')
+      }
+    } catch (error) {
+      showNotice(error.message, 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleScenarioChange = (newScenario) => {
     setScenario(newScenario)
     showNotice(`Scenario changed to: ${newScenario}`, 'success')
@@ -1263,14 +1309,14 @@ export default function ConversationPage() {
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', alignItems: 'center' }}>
                   {msg.role === 'ai' && (
-                    <TranslateBtn onClick={() => toggleTranslation(index)}>
+                    <TranslateBtn onClick={() => handleTranslate(index, msg.text)}>
                       {translatingIndices.has(index) ? 'Hide' : 'Translate'}
                     </TranslateBtn>
                   )}
 
                   <ReplayBtn
                     role={msg.role}
-                    onClick={() => speakMessage(msg.text, msg.id)}
+                    onClick={() => speakText(msg.text, msg.id)}
                     title="Play Audio"
                   >
                     🔊
@@ -1539,3 +1585,4 @@ export default function ConversationPage() {
     </ThemeProvider>
   )
 }
+
