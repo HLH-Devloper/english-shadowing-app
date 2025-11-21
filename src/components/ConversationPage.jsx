@@ -750,6 +750,7 @@ export default function ConversationPage() {
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
+  const chatAreaRef = useRef(null)
   const timerRef = useRef(null)
   const recordingTextareaRef = useRef(null) // Ref for recording textarea
 

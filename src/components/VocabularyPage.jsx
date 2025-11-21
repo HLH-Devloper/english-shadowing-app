@@ -131,9 +131,9 @@ export default function VocabularyPage() {
     return (
         <section className="cyber-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
-            <header className="cyber-header">
-                <div className="cyber-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-                    <span className="cyber-brand-text">⬅ 返回首页</span>
+            <header className="cyber-header" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', alignItems: 'center', gap: '24px' }}>
+                <div className="back-btn" onClick={() => navigate('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                    <span style={{ marginRight: '8px' }}>⬅</span> 返回首页
                 </div>
                 <div className="cyber-nav">
                     <div className={`cyber-nav-item ${activeTab === 'list' ? 'active' : ''}`} onClick={() => setActiveTab('list')}>单词列表</div>
@@ -280,6 +280,6 @@ export default function VocabularyPage() {
                 )}
             </div>
             <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
-        </section>
+        </section >
     )
 }
