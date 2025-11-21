@@ -1,4 +1,4 @@
-import { getSubtitles } from 'youtube-captions-scraper'; // Keep this if needed, or remove if fully replaced. Actually I'll remove it to be clean.
+// Keep this if needed, or remove if fully replaced. Actually I'll remove it to be clean.
 import ytdl from '@distube/ytdl-core';
 import https from 'https';
 import { parse } from 'url';
