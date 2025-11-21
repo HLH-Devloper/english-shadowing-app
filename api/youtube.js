@@ -1,10 +1,10 @@
-// Keep this if needed, or remove if fully replaced. Actually I'll remove it to be clean.
 import ytdl from '@distube/ytdl-core';
 import https from 'https';
-import { parse } from 'url';
 
 export default async function handler(req, res) {
     const { videoId, lang = 'en' } = req.query;
+
+    console.log(`[YouTube API] Fetching for videoId: ${videoId}, lang: ${lang}`);
 
     if (!videoId) {
         return res.status(400).json({ error: 'Missing videoId' });
@@ -18,11 +18,14 @@ export default async function handler(req, res) {
 
         const fetchPromise = (async () => {
             const agentOptions = {};
+            let cookieString = '';
             if (process.env.YOUTUBE_COOKIES) {
                 try {
                     const cookies = JSON.parse(process.env.YOUTUBE_COOKIES);
                     const agent = ytdl.createAgent(cookies);
                     agentOptions.agent = agent;
+                    // Construct cookie string for fetchCaptions
+                    cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
                 } catch (e) {
                     console.warn('Failed to parse YOUTUBE_COOKIES:', e);
                 }
@@ -56,7 +59,8 @@ export default async function handler(req, res) {
             }
 
             const trackUrl = track.baseUrl + '&fmt=json3';
-            const captionsData = await fetchCaptions(trackUrl);
+            // Pass cookieString to fetchCaptions
+            const captionsData = await fetchCaptions(trackUrl, cookieString);
 
             const formatted = [];
             if (captionsData && captionsData.events) {
@@ -85,35 +89,49 @@ export default async function handler(req, res) {
         res.status(200).json(result);
 
     } catch (error) {
-        console.error('Error fetching subtitles:', error);
+        console.error('[YouTube API] Error fetching subtitles:', error);
 
         // 确保返回 JSON 而不是让 Vercel 崩溃
         if (error.message === 'Request timed out') {
-            return res.status(504).json({ error: 'Request timed out' });
+            return res.status(504).json({ error: 'Request timed out (Vercel limit)' });
         }
-        if (error.message.includes('Video unavailable')) {
-            return res.status(404).json({ error: 'Video unavailable (Cookies required)' });
+        if (error.message && error.message.includes('Video unavailable')) {
+            return res.status(404).json({ error: 'Video unavailable (Cookies required or Region Locked)', details: error.message });
         }
         if (error.statusCode === 403 || error.statusCode === 429) {
-            return res.status(403).json({ error: 'YouTube access restricted (Rate limit or IP block)' });
+            return res.status(403).json({ error: 'YouTube access restricted (Rate limit or IP block)', details: error.message });
         }
 
         // 兜底错误
-        res.status(500).json({ error: 'Failed to fetch subtitles', details: error.message || 'Unknown error' });
+        res.status(500).json({ error: 'Failed to fetch subtitles', details: error.message || 'Unknown error', stack: error.stack });
     }
 }
 
 // 辅助函数：获取并解析字幕数据
-async function fetchCaptions(url) {
+async function fetchCaptions(url, cookieString) {
+    console.log(`[YouTube API] Fetching captions from: ${url}`);
+    const options = {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+    };
+    if (cookieString) {
+        options.headers['Cookie'] = cookieString;
+    }
+
     return new Promise((resolve, reject) => {
-        https.get(url, (res) => {
+        https.get(url, options, (res) => {
             let data = '';
             res.on('data', (chunk) => data += chunk);
             res.on('end', () => {
+                if (res.statusCode !== 200) {
+                    return reject(new Error(`Failed to fetch captions, status: ${res.statusCode}`));
+                }
                 try {
                     const json = JSON.parse(data);
                     resolve(json);
                 } catch (e) {
+                    console.error(`[YouTube API] Failed to parse JSON. Data preview: ${data.substring(0, 200)}...`);
                     reject(new Error('Failed to parse caption JSON'));
                 }
             });
