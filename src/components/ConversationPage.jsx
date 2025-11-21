@@ -832,6 +832,9 @@ export default function ConversationPage() {
         const id = await ChatHistoryService.saveConversation(user.uid, conversationData, sessionId)
         if (!sessionId) {
           setSessionId(id)
+          // IMPORTANT: Set isHistoryLoaded to true to prevent reloading (and overwriting) 
+          // the messages we just saved when the loadHistory effect triggers due to sessionId change.
+          setIsHistoryLoaded(true)
         }
       } catch (error) {
         console.error('Failed to save chat history:', error)
