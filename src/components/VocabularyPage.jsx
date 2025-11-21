@@ -11,6 +11,7 @@ export default function VocabularyPage() {
     const [words, setWords] = useState([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('list') // list | flashcard
+    const [filterType, setFilterType] = useState('all') // all | word | sentence
     const [toastMsg, setToastMsg] = useState('')
     const [toastType, setToastType] = useState('info')
 
@@ -128,6 +129,12 @@ export default function VocabularyPage() {
         }
     }
 
+    const filteredWords = words.filter(w => {
+        if (filterType === 'all') return true
+        const type = w.type || 'word'
+        return type === filterType
+    })
+
     return (
         <section className="cyber-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
@@ -151,19 +158,57 @@ export default function VocabularyPage() {
                     <>
                         {activeTab === 'list' && (
                             <div className="vocab-list">
-                                {words.length === 0 ? (
+                                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                                    <button
+                                        onClick={() => setFilterType('all')}
+                                        style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            border: '1px solid #334155',
+                                            background: filterType === 'all' ? '#3b82f6' : 'rgba(30, 41, 59, 0.5)',
+                                            color: '#fff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >全部</button>
+                                    <button
+                                        onClick={() => setFilterType('word')}
+                                        style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            border: '1px solid #334155',
+                                            background: filterType === 'word' ? '#06b6d4' : 'rgba(30, 41, 59, 0.5)',
+                                            color: '#fff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >单词</button>
+                                    <button
+                                        onClick={() => setFilterType('sentence')}
+                                        style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            border: '1px solid #334155',
+                                            background: filterType === 'sentence' ? '#8b5cf6' : 'rgba(30, 41, 59, 0.5)',
+                                            color: '#fff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >句子</button>
+                                </div>
+
+                                {filteredWords.length === 0 ? (
                                     <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: '50px' }}>
                                         <div style={{ fontSize: '48px', marginBottom: '20px' }}>📚</div>
-                                        <p>生词本还是空的哦</p>
-                                        <p>快去视频里点击字幕收藏生词吧！</p>
+                                        <p>没有找到相关内容</p>
                                     </div>
                                 ) : (
-                                    words.map(word => (
+                                    filteredWords.map(word => (
                                         <div key={word.id} className="bento-card" style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                 <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <h3 style={{ margin: 0, fontSize: '20px', color: '#fff' }}>{word.word}</h3>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                        <h3 style={{ margin: 0, fontSize: '20px', color: '#fff', wordBreak: 'break-word' }}>{word.word}</h3>
                                                         <span style={{
                                                             fontSize: '10px',
                                                             padding: '2px 6px',
@@ -171,7 +216,8 @@ export default function VocabularyPage() {
                                                             background: word.type === 'sentence' ? '#8b5cf6' : '#06b6d4',
                                                             color: '#fff',
                                                             marginLeft: '8px',
-                                                            verticalAlign: 'middle'
+                                                            verticalAlign: 'middle',
+                                                            flexShrink: 0
                                                         }}>
                                                             {word.type === 'sentence' ? '句子' : '单词'}
                                                         </span>
@@ -241,10 +287,28 @@ export default function VocabularyPage() {
                                                 boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
                                             }}
                                         >
-                                            <div style={{ textAlign: 'center', padding: '20px' }}>
+                                            <div style={{
+                                                textAlign: 'center',
+                                                padding: '20px',
+                                                width: '100%',
+                                                height: '100%',
+                                                overflowY: 'auto',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'center',
+                                                alignItems: 'center'
+                                            }}>
                                                 {!isFlipped ? (
                                                     <>
-                                                        <h2 style={{ fontSize: '32px', marginBottom: '10px', color: '#fff' }}>{reviewQueue[currentCardIndex].word}</h2>
+                                                        <h2 style={{
+                                                            fontSize: reviewQueue[currentCardIndex].word.length > 50 ? '18px' : '32px',
+                                                            marginBottom: '10px',
+                                                            color: '#fff',
+                                                            wordBreak: 'break-word',
+                                                            lineHeight: 1.4
+                                                        }}>
+                                                            {reviewQueue[currentCardIndex].word}
+                                                        </h2>
                                                         <div style={{ color: '#94a3b8', fontSize: '18px' }}>{reviewQueue[currentCardIndex].phonetic}</div>
                                                         <div style={{ marginTop: '20px', color: '#64748b', fontSize: '14px' }}>(点击翻转)</div>
                                                     </>
