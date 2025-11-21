@@ -1,0 +1,7 @@
+Running handler test...
+[YouTube API] Fetching for videoId: jNQXAC9IVRw, lang: en
+[YouTube API] Calling getSubtitles for videoId=jNQXAC9IVRw, lang=en
+[YouTube API] Successfully fetched 0 captions
+Response Status: 200
+Response Body: []
+Handler finished execution.

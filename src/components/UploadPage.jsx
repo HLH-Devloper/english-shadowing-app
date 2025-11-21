@@ -135,6 +135,7 @@ export default function UploadPage() {
           <div className={`cyber-nav-item ${activeTab === 'ted' ? 'active' : ''}`} onClick={() => setActiveTab('ted')}>网络视频</div>
           <div className={`cyber-nav-item ${activeTab === 'local' ? 'active' : ''}`} onClick={() => setActiveTab('local')}>本地</div>
           <div className={`cyber-nav-item ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')}>AI陪练</div>
+          <div className="cyber-nav-item" onClick={() => navigate('/vocabulary')}>生词本</div>
         </nav>
 
         <div className="cyber-actions">

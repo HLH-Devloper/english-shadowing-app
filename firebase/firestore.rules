@@ -37,6 +37,11 @@ service cloud.firestore {
         // 初始化/合并其它允许字段
         true
       );
+
+      // 生词本子集合：仅本人可读写
+      match /vocabulary/{wordId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // 邀请码文档
