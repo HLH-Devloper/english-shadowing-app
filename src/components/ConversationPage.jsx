@@ -278,55 +278,38 @@ const TranslationText = styled.div`
   font-style: italic;
 `
 
-const TranslateBtn = styled.button`
+const ActionBtn = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.accent};
-  font-size: 0.8rem;
+  color: ${props => props.active ? props.theme.accent : (props.role === 'user' ? 'rgba(255,255,255,0.9)' : props.theme.textSecondary)};
   cursor: pointer;
-  margin-top: 8px;
-  padding: 0;
+  padding: 6px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  opacity: 0.8;
-  
-  &:hover { opacity: 1; text-decoration: underline; }
+  justify-content: center;
+  transition: all 0.2s;
+  border-radius: 8px;
+  opacity: 0.7;
+  margin-left: 4px;
+
+  &:hover {
+    opacity: 1;
+    background: ${props => props.role === 'user' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)'};
+    transform: translateY(-1px);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 `
 
-const ReplayBtn = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.role === 'user' ? 'rgba(255,255,255,0.8)' : props.theme.accent};
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 4px;
-  margin-left: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: all 0.2s;
-  
-  &:hover { opacity: 1; transform: scale(1.1); }
-`
 
-const SaveBtn = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.role === 'user' ? 'rgba(255,255,255,0.8)' : props.theme.accent};
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 4px;
-  margin-left: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: all 0.2s;
-  
-  &:hover { opacity: 1; transform: scale(1.1); }
-`
 
 const LoadingDots = styled.span`
   &::after {
@@ -1317,28 +1300,40 @@ export default function ConversationPage() {
                 {msg.text}
 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', alignItems: 'center', gap: '4px' }}>
                   {msg.role === 'ai' && (
-                    <TranslateBtn onClick={() => handleTranslate(index, msg.text)}>
-                      {translatingIndices.has(index) ? 'Hide' : 'Translate'}
-                    </TranslateBtn>
+                    <ActionBtn
+                      onClick={() => handleTranslate(index, msg.text)}
+                      active={translatingIndices.has(index) || msg.translation}
+                      title="Translate"
+                    >
+                      <svg viewBox="0 0 24 24">
+                        <path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" /><path d="m22 22-5-10-5 10" /><path d="M14 18h6" />
+                      </svg>
+                    </ActionBtn>
                   )}
 
-                  <ReplayBtn
+                  <ActionBtn
                     role={msg.role}
                     onClick={() => speakText(msg.text, msg.id)}
                     title="Play Audio"
                   >
-                    🔊
-                  </ReplayBtn>
+                    <svg viewBox="0 0 24 24">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    </svg>
+                  </ActionBtn>
 
-                  <SaveBtn
+                  <ActionBtn
                     role={msg.role}
                     onClick={() => handleDirectSave(msg, index)}
                     title="Save to Vocabulary"
                   >
-                    💾
-                  </SaveBtn>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </ActionBtn>
                 </div>
 
                 {(msg.translation || translatingIndices.has(index)) && (
