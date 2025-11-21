@@ -69,7 +69,7 @@ export default function VocabularyPage() {
             setCurrentCardIndex(0)
             setIsFlipped(false)
         }
-    }, [activeTab, words])
+    }, [activeTab])
 
     const handleMasteryUpdate = async (isRemembered) => {
         if (!currentUser || reviewQueue.length === 0) return
@@ -123,7 +123,7 @@ export default function VocabularyPage() {
                 </div>
             </header>
 
-            <div className="cyber-content" style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+            <div className="cyber-content" style={{ padding: '100px 20px 20px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
                 {loading ? (
                     <div style={{ color: '#fff', textAlign: 'center', marginTop: '50px' }}>加载中...</div>
                 ) : (
