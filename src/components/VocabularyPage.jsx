@@ -164,6 +164,17 @@ export default function VocabularyPage() {
                                                 <div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                         <h3 style={{ margin: 0, fontSize: '20px', color: '#fff' }}>{word.word}</h3>
+                                                        <span style={{
+                                                            fontSize: '10px',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            background: word.type === 'sentence' ? '#8b5cf6' : '#06b6d4',
+                                                            color: '#fff',
+                                                            marginLeft: '8px',
+                                                            verticalAlign: 'middle'
+                                                        }}>
+                                                            {word.type === 'sentence' ? '句子' : '单词'}
+                                                        </span>
                                                         <span style={{ color: '#94a3b8', fontSize: '14px' }}>{word.phonetic}</span>
                                                         <button
                                                             onClick={() => speakWord(word.word)}

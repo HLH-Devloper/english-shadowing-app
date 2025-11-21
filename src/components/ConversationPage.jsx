@@ -994,24 +994,35 @@ export default function ConversationPage() {
 
     const utterance = new SpeechSynthesisUtterance(cleanText)
     utterance.lang = 'en-US'
-
     utterance.onstart = () => {
       if (msgId) setSpeakingMsgId(msgId)
     }
-
     utterance.onend = () => {
       if (msgId) setSpeakingMsgId(null)
     }
-
-    utterance.onerror = () => {
-      if (msgId) setSpeakingMsgId(null)
+    utterance.onerror = (event) => {
+      console.error('SpeechSynthesisUtterance error:', event)
+      setSpeakingMsgId(null)
     }
 
     synthRef.current.speak(utterance)
   }
 
   const handleTranslate = async (index, text) => {
-    if (messages[index].translation || translatingIndices.has(index)) return
+    // If already translated, return existing translation
+    if (messages[index].translation) return messages[index].translation
+
+    // If already translating, wait a bit and check again (simple debounce/wait)
+    if (translatingIndices.has(index)) {
+      return new Promise(resolve => {
+        const checkInterval = setInterval(() => {
+          if (messages[index].translation) {
+            clearInterval(checkInterval)
+            resolve(messages[index].translation)
+          }
+        }, 500)
+      })
+    }
 
     setTranslatingIndices(prev => new Set(prev).add(index))
 
@@ -1049,10 +1060,12 @@ export default function ConversationPage() {
           newMsgs[index] = { ...newMsgs[index], translation: data.reply }
           return newMsgs
         })
+        return data.reply
       }
     } catch (error) {
       console.error('Translation error:', error)
       showNotice(`Translation failed: ${error.message}`, 'error')
+      return null
     } finally {
       setTranslatingIndices(prev => {
         const next = new Set(prev)
@@ -1195,42 +1208,36 @@ export default function ConversationPage() {
     }
   }
 
-  const handleSaveClick = (msg) => {
-    setSaveWordData({
-      word: '',
-      definition: '',
-      context: msg.text
-    })
-    setSaveModalOpen(true)
-  }
-
-  const handleConfirmSave = async () => {
-    if (!saveWordData.word.trim()) {
-      showNotice('请输入单词', 'warning')
+  const handleDirectSave = async (msg, index) => {
+    const user = auth.currentUser
+    if (!user) {
+      showNotice('请先登录', 'error')
       return
     }
 
     setIsSaving(true)
     try {
-      const user = auth.currentUser
-      if (!user) {
-        showNotice('请先登录', 'error')
-        return
+      let translation = msg.translation
+
+      // If no translation exists, fetch it first
+      if (!translation) {
+        showNotice('正在获取翻译...', 'info')
+        translation = await handleTranslate(index, msg.text)
       }
 
       const result = await VocabularyService.addWord(user.uid, {
-        word: saveWordData.word.trim(),
-        definition: saveWordData.definition.trim(),
+        word: msg.text, // For sentences, the 'word' field stores the sentence
+        definition: translation || '暂无翻译',
+        type: 'sentence', // Mark as sentence
         context: {
-          original: saveWordData.context,
-          translation: ''
+          original: msg.text,
+          translation: translation || ''
         },
         source: 'AI Chat'
       })
 
       if (result.success) {
-        showNotice(result.message, 'success')
-        setSaveModalOpen(false)
+        showNotice('已收藏到生词本 (句子)', 'success')
       } else {
         showNotice(result.message, 'info')
       }
@@ -1324,14 +1331,14 @@ export default function ConversationPage() {
 
                   <SaveBtn
                     role={msg.role}
-                    onClick={() => handleSaveClick(msg)}
+                    onClick={() => handleDirectSave(msg, index)}
                     title="Save to Vocabulary"
                   >
                     💾
                   </SaveBtn>
                 </div>
 
-                {translatingIndices.has(index) && (
+                {(msg.translation || translatingIndices.has(index)) && (
                   <>
                     <TranslationDivider />
                     <TranslationText>
@@ -1345,80 +1352,7 @@ export default function ConversationPage() {
           <div ref={messagesEndRef} />
         </ChatArea>
 
-        {/* Save Word Modal */}
-        {saveModalOpen && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)',
-            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }} onClick={() => setSaveModalOpen(false)}>
-            <div style={{
-              background: theme.cardBg, padding: '24px', borderRadius: '16px',
-              width: '90%', maxWidth: '400px', border: theme.border,
-              boxShadow: theme.shadow
-            }} onClick={e => e.stopPropagation()}>
-              <h3 style={{ margin: '0 0 16px 0', color: theme.text }}>收藏生词</h3>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: theme.textSecondary, fontSize: '0.9rem' }}>单词 / 短语</label>
-                <input
-                  autoFocus
-                  value={saveWordData.word}
-                  onChange={e => setSaveWordData({ ...saveWordData, word: e.target.value })}
-                  style={{
-                    width: '100%', padding: '10px', borderRadius: '8px',
-                    border: theme.border, background: theme.inputBg, color: theme.text,
-                    outline: 'none'
-                  }}
-                  placeholder="输入想收藏的单词..."
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: theme.textSecondary, fontSize: '0.9rem' }}>释义 (可选)</label>
-                <input
-                  value={saveWordData.definition}
-                  onChange={e => setSaveWordData({ ...saveWordData, definition: e.target.value })}
-                  style={{
-                    width: '100%', padding: '10px', borderRadius: '8px',
-                    border: theme.border, background: theme.inputBg, color: theme.text,
-                    outline: 'none'
-                  }}
-                  placeholder="输入中文释义..."
-                />
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: theme.textSecondary, fontSize: '0.9rem' }}>来源句子</label>
-                <div style={{
-                  padding: '10px', borderRadius: '8px', background: 'rgba(0,0,0,0.1)',
-                  color: theme.textSecondary, fontSize: '0.9rem', fontStyle: 'italic'
-                }}>
-                  "{saveWordData.context}"
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => setSaveModalOpen(false)}
-                  style={{
-                    padding: '8px 16px', borderRadius: '8px', border: 'none',
-                    background: 'rgba(0,0,0,0.1)', color: theme.text, cursor: 'pointer'
-                  }}
-                >取消</button>
-                <button
-                  onClick={handleConfirmSave}
-                  disabled={isSaving}
-                  style={{
-                    padding: '8px 20px', borderRadius: '8px', border: 'none',
-                    background: theme.accent, color: '#fff', cursor: 'pointer',
-                    opacity: isSaving ? 0.7 : 1
-                  }}
-                >{isSaving ? '保存中...' : '保存'}</button>
-              </div>
-            </div>
-          </div>
-        )}
 
         <Controls>
           {suggestions.length > 0 && (
@@ -1581,8 +1515,8 @@ export default function ConversationPage() {
         </Sidebar>
 
         <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
-      </PageContainer>
-    </ThemeProvider>
+      </PageContainer >
+    </ThemeProvider >
   )
 }
 
