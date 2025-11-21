@@ -75,7 +75,7 @@ function getAdminStatus() {
         clientEmail: json.client_email || null,
         hasPrivateKey: !!json.private_key
       }
-    } catch (_) {}
+    } catch (_) { }
   } else if (process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT) {
     cfg = {
       source: 'env_vars',
@@ -103,18 +103,18 @@ function getAdminStatus() {
 // 统一限制输出长度与结构化 senses（守护）
 const ALLOWED_POS = ['adv', 'n', 'adj', 'vt', 'vi', 'prep', 'conj', 'pron', 'num', 'art', 'int', 'other']
 const POS_LABEL = {
-  adv: 'Adv.',
-  n: 'N.',
-  adj: 'Adj.',
-  vt: 'Vt.',
-  vi: 'Vi.',
-  prep: 'Prep.',
-  conj: 'Conj.',
-  pron: 'Pron.',
-  num: 'Num.',
-  art: 'Art.',
-  int: 'Int.',
-  other: 'Other'
+  adv: 'adv.',
+  n: 'n.',
+  adj: 'adj.',
+  vt: 'vt.',
+  vi: 'vi.',
+  prep: 'prep.',
+  conj: 'conj.',
+  pron: 'pron.',
+  num: 'num.',
+  art: 'art.',
+  int: 'int.',
+  other: 'other'
 }
 
 function normalizeGeminiDict(input, q) {
@@ -124,8 +124,8 @@ function normalizeGeminiDict(input, q) {
   // 新结构：senses 为对象数组 { pos, cn }
   let senses = Array.isArray(input?.senses)
     ? input.senses
-        .map((s) => ({ pos: safe(s?.pos).toLowerCase(), cn: safe(s?.cn) }))
-        .filter((s) => s.cn)
+      .map((s) => ({ pos: safe(s?.pos).toLowerCase(), cn: safe(s?.cn) }))
+      .filter((s) => s.cn)
     : []
   // 规范化词性枚举，并附带 label
   senses = senses.map((s) => {
@@ -144,8 +144,8 @@ function normalizeGeminiDict(input, q) {
 
   let examples = Array.isArray(input?.examples)
     ? input.examples
-        .map((e) => ({ en: safe(e?.en), zh: safe(e?.zh) }))
-        .filter((e) => e.en)
+      .map((e) => ({ en: safe(e?.en), zh: safe(e?.zh) }))
+      .filter((e) => e.en)
     : []
   if (examples.length > 2) examples = examples.slice(0, 2)
   return { word, phonetic, senses, explains, examples }
@@ -157,8 +157,8 @@ async function lookupFromFirestore(q) {
     if (!db) return null
     const ref = db.collection('wordDict').doc(q)
     const snap = await ref.get()
-  if (snap.exists) {
-    const data = snap.data() || {}
+    if (snap.exists) {
+      const data = snap.data() || {}
       const senses = Array.isArray(data.senses) ? data.senses : []
       const explains = Array.isArray(data.explains) ? data.explains : []
       const examples = Array.isArray(data.examples) ? data.examples : []
@@ -166,7 +166,7 @@ async function lookupFromFirestore(q) {
       if (senses.length > 0 || explains.length > 0) {
         return { word: q, phonetic, senses, explains, examples, source: 'firebase' }
       }
-  }
+    }
     return null
   } catch (e) {
     console.warn('读取 Firestore 失败', e)

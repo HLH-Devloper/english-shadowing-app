@@ -259,6 +259,13 @@ export default function VocabularyPage() {
                                                 </div>
                                             )}
 
+                                            {word.example && (
+                                                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', fontSize: '14px', marginTop: '4px' }}>
+                                                    <div style={{ color: '#e2e8f0', fontStyle: 'italic' }}>Example: {word.example.en}</div>
+                                                    <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{word.example.zh || word.example.cn}</div>
+                                                </div>
+                                            )}
+
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                                                 <span>来源: {word.source}</span>
                                                 <span>掌握度: {'⭐'.repeat(word.masteryLevel || 0)}</span>
