@@ -13,6 +13,8 @@ export default function VocabularyPage() {
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('list') // list | flashcard
     const [filterType, setFilterType] = useState('all') // all | word | sentence
+    const [viewMode, setViewMode] = useState('card') // card | compact
+    const [visibleCount, setVisibleCount] = useState(20)
     const [showRules, setShowRules] = useState(false)
     const [showStats, setShowStats] = useState(false)
     const [showClearModal, setShowClearModal] = useState(false)
@@ -110,18 +112,7 @@ export default function VocabularyPage() {
             setCurrentCardIndex(0)
             setIsFlipped(false)
         }
-    }, [activeTab, reviewMode]) // words is in closure, but adding it to deps might cause loops if not careful. words only changes on load/delete/update. update changes words, which triggers this.
-    // If update changes words, we might reset the queue mid-review if we include words in deps.
-    // Actually, we WANT to update the queue if a word is updated (e.g. mastery level changes).
-    // BUT, if we reset the queue, we lose progress?
-    // No, `loadWords` sets `words`. `handleMasteryUpdate` sets `words`.
-    // If `handleMasteryUpdate` runs, `words` changes. `useEffect` runs. `reviewQueue` is re-calculated. `currentCardIndex` resets to 0.
-    // THIS IS BAD. We shouldn't reset `currentCardIndex` when `words` updates during a review session.
-    // The previous code didn't have `words` in deps. It only ran on `activeTab` change.
-    // So `reviewQueue` was static during the session.
-    // I should keep it that way. `reviewQueue` is initialized when entering the tab or changing mode.
-    // So I will NOT include `words` in deps.
-
+    }, [activeTab, reviewMode])
 
     const handleMasteryUpdate = async (isRemembered) => {
         if (!currentUser || reviewQueue.length === 0) return
@@ -151,7 +142,8 @@ export default function VocabularyPage() {
         }
     }
 
-    const speakWord = (text) => {
+    const speakWord = (text, e) => {
+        if (e) e.stopPropagation()
         if ('speechSynthesis' in window) {
             const utter = new SpeechSynthesisUtterance(text)
             utter.lang = 'en-US'
@@ -159,11 +151,23 @@ export default function VocabularyPage() {
         }
     }
 
-    const filteredWords = words.filter(w => {
+    const allFilteredWords = words.filter(w => {
         if (filterType === 'all') return true
         const type = w.type || 'word'
         return type === filterType
     })
+
+    const displayedWords = allFilteredWords.slice(0, visibleCount)
+    const hasMore = displayedWords.length < allFilteredWords.length
+
+    const handleLoadMore = () => {
+        setVisibleCount(prev => prev + 20)
+    }
+
+    // Reset visible count when filter changes
+    useEffect(() => {
+        setVisibleCount(20)
+    }, [filterType, activeTab])
 
     return (
         <section className="cyber-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -180,8 +184,9 @@ export default function VocabularyPage() {
                     {words.length > 0 && (
                         <button
                             onClick={handleClearAll}
-                            style={{ background: 'none', border: '1px solid rgba(239, 68, 68, 0.5)', borderRadius: '4px', padding: '2px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}
-                        >清空</button>
+                            style={{ background: 'none', border: '1px solid rgba(239, 68, 68, 0.5)', borderRadius: '50%', width: '24px', height: '24px', color: '#ef4444', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="清空生词本"
+                        >🗑️</button>
                     )}
                     <button
                         onClick={() => setShowStats(true)}
@@ -204,343 +209,331 @@ export default function VocabularyPage() {
                     <>
                         {activeTab === 'list' && (
                             <div className="vocab-list">
-                                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                                    <button
-                                        onClick={() => setFilterType('all')}
-                                        style={{
-                                            padding: '6px 16px',
-                                            borderRadius: '20px',
-                                            border: '1px solid #334155',
-                                            background: filterType === 'all' ? '#3b82f6' : 'rgba(30, 41, 59, 0.5)',
-                                            color: '#fff',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >全部</button>
-                                    <button
-                                        onClick={() => setFilterType('word')}
-                                        style={{
-                                            padding: '6px 16px',
-                                            borderRadius: '20px',
-                                            border: '1px solid #334155',
-                                            background: filterType === 'word' ? '#06b6d4' : 'rgba(30, 41, 59, 0.5)',
-                                            color: '#fff',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >单词</button>
-                                    <button
-                                        onClick={() => setFilterType('sentence')}
-                                        style={{
-                                            padding: '6px 16px',
-                                            borderRadius: '20px',
-                                            border: '1px solid #334155',
-                                            background: filterType === 'sentence' ? '#8b5cf6' : 'rgba(30, 41, 59, 0.5)',
-                                            color: '#fff',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >句子</button>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button
+                                            onClick={() => setFilterType('all')}
+                                            style={{
+                                                padding: '6px 16px',
+                                                borderRadius: '20px',
+                                                border: '1px solid #334155',
+                                                background: filterType === 'all' ? '#3b82f6' : 'rgba(30, 41, 59, 0.5)',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >全部</button>
+                                        <button
+                                            onClick={() => setFilterType('word')}
+                                            style={{
+                                                padding: '6px 16px',
+                                                borderRadius: '20px',
+                                                border: '1px solid #334155',
+                                                background: filterType === 'word' ? '#06b6d4' : 'rgba(30, 41, 59, 0.5)',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >单词</button>
+                                        <button
+                                            onClick={() => setFilterType('sentence')}
+                                            style={{
+                                                padding: '6px 16px',
+                                                borderRadius: '20px',
+                                                border: '1px solid #334155',
+                                                background: filterType === 'sentence' ? '#8b5cf6' : 'rgba(30, 41, 59, 0.5)',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >句子</button>
+                                    </div>
+
+                                    {/* View Mode Toggle */}
+                                    <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '8px', padding: '2px', border: '1px solid #334155' }}>
+                                        <button
+                                            onClick={() => setViewMode('card')}
+                                            title="卡片视图"
+                                            style={{
+                                                background: viewMode === 'card' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                padding: '4px 8px',
+                                                cursor: 'pointer',
+                                                fontSize: '16px',
+                                                color: viewMode === 'card' ? '#fff' : '#64748b'
+                                            }}
+                                        >🗂️</button>
+                                        <button
+                                            onClick={() => setViewMode('compact')}
+                                            title="紧凑视图"
+                                            style={{
+                                                background: viewMode === 'compact' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                padding: '4px 8px',
+                                                cursor: 'pointer',
+                                                fontSize: '16px',
+                                                color: viewMode === 'compact' ? '#fff' : '#64748b'
+                                            }}
+                                        >☰</button>
+                                    </div>
                                 </div>
 
-                                {filteredWords.length === 0 ? (
+                                {displayedWords.length === 0 ? (
                                     <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: '50px' }}>
                                         <div style={{ fontSize: '48px', marginBottom: '20px' }}>📚</div>
                                         <p>没有找到相关内容</p>
                                     </div>
                                 ) : (
-                                    filteredWords.map(word => (
-                                        <div key={word.id} className="bento-card" style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                                        <h3 style={{ margin: 0, fontSize: '20px', color: '#fff', wordBreak: 'break-word' }}>{word.word}</h3>
-                                                        <span style={{
-                                                            fontSize: '10px',
-                                                            padding: '2px 6px',
-                                                            borderRadius: '4px',
-                                                            background: word.type === 'sentence' ? '#8b5cf6' : '#06b6d4',
-                                                            color: '#fff',
-                                                            marginLeft: '8px',
-                                                            verticalAlign: 'middle',
-                                                            flexShrink: 0
-                                                        }}>
-                                                            {word.type === 'sentence' ? '句子' : '单词'}
-                                                        </span>
-                                                        <span style={{ color: '#94a3b8', fontSize: '14px' }}>{word.phonetic}</span>
+                                    <>
+                                        {displayedWords.map(word => (
+                                            viewMode === 'card' ? (
+                                                // Card View
+                                                <div key={word.id} className="bento-card" style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                        <div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                                <h3 style={{ margin: 0, fontSize: '20px', color: '#fff', wordBreak: 'break-word' }}>{word.word}</h3>
+                                                                <span style={{
+                                                                    fontSize: '10px',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '4px',
+                                                                    background: word.type === 'sentence' ? '#8b5cf6' : '#06b6d4',
+                                                                    color: '#fff',
+                                                                    marginLeft: '8px',
+                                                                    verticalAlign: 'middle',
+                                                                    flexShrink: 0
+                                                                }}>
+                                                                    {word.type === 'sentence' ? '句子' : '单词'}
+                                                                </span>
+                                                                <span style={{ color: '#94a3b8', fontSize: '14px' }}>{word.phonetic}</span>
+                                                                <button
+                                                                    onClick={(e) => speakWord(word.word, e)}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#06b6d4' }}
+                                                                >🔊</button>
+                                                            </div>
+                                                            <p style={{ color: '#cbd5e1', margin: '4px 0' }}>{word.definition}</p>
+                                                        </div>
                                                         <button
-                                                            onClick={() => speakWord(word.word)}
-                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#06b6d4' }}
+                                                            onClick={() => handleDelete(word.id)}
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, fontSize: '18px' }}
+                                                            title="移除"
+                                                        >🗑️</button>
+                                                    </div>
+
+                                                    {word.context && (word.type !== 'sentence' || word.context.original !== word.word) && (
+                                                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', fontSize: '14px' }}>
+                                                            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>
+                                                                {word.source === 'AI Chat' ? '对话原句' : '视频原句'}
+                                                            </div>
+                                                            <div style={{ color: '#e2e8f0' }}>"{word.context.original}"</div>
+                                                            <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{word.context.translation}</div>
+                                                        </div>
+                                                    )}
+
+                                                    {word.example && (
+                                                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', fontSize: '14px', marginTop: '4px' }}>
+                                                            <div style={{ color: '#e2e8f0', fontStyle: 'italic' }}>Example: {word.example.en}</div>
+                                                            <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{word.example.zh || word.example.cn}</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                // Compact View
+                                                <div key={word.id} style={{
+                                                    background: 'rgba(30, 41, 59, 0.5)',
+                                                    border: '1px solid #334155',
+                                                    borderRadius: '8px',
+                                                    padding: '12px 16px',
+                                                    marginBottom: '8px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    gap: '10px'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                                                        <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '16px', whiteSpace: 'nowrap' }}>{word.word}</div>
+                                                        <div style={{ color: '#94a3b8', fontSize: '12px', whiteSpace: 'nowrap' }}>{word.phonetic}</div>
+                                                        <div style={{ color: '#cbd5e1', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                                                            {word.definition}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                                                        <button
+                                                            onClick={(e) => speakWord(word.word, e)}
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#06b6d4', fontSize: '14px' }}
                                                         >🔊</button>
+                                                        <button
+                                                            onClick={() => handleDelete(word.id)}
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, fontSize: '14px' }}
+                                                            title="移除"
+                                                        >🗑️</button>
                                                     </div>
-                                                    <p style={{ color: '#cbd5e1', margin: '4px 0' }}>{word.definition}</p>
                                                 </div>
+                                            )
+                                        ))}
+
+                                        {hasMore && (
+                                            <div style={{ textAlign: 'center', marginTop: '20px' }}>
                                                 <button
-                                                    onClick={() => handleDelete(word.id)}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, fontSize: '18px' }}
-                                                    title="移除"
-                                                >🗑️</button>
+                                                    onClick={handleLoadMore}
+                                                    style={{
+                                                        background: 'rgba(255,255,255,0.1)',
+                                                        border: '1px solid #334155',
+                                                        color: '#fff',
+                                                        padding: '10px 30px',
+                                                        borderRadius: '20px',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseOver={e => e.target.style.background = 'rgba(255,255,255,0.2)'}
+                                                    onMouseOut={e => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                                                >
+                                                    加载更多 ({allFilteredWords.length - displayedWords.length})
+                                                </button>
                                             </div>
-
-                                            {word.context && (word.type !== 'sentence' || word.context.original !== word.word) && (
-                                                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', fontSize: '14px' }}>
-                                                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>
-                                                        {word.source === 'AI Chat' ? '对话原句' : '视频原句'}
-                                                    </div>
-                                                    <div style={{ color: '#e2e8f0' }}>"{word.context.original}"</div>
-                                                    <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{word.context.translation}</div>
-                                                </div>
-                                            )}
-
-                                            {word.example && (
-                                                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', fontSize: '14px', marginTop: '4px' }}>
-                                                    <div style={{ color: '#e2e8f0', fontStyle: 'italic' }}>Example: {word.example.en}</div>
-                                                    <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{word.example.zh || word.example.cn}</div>
-                                                </div>
-                                            )}
-
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                                                <span>来源: {word.source}</span>
-                                                <span>掌握度: {'⭐'.repeat(word.masteryLevel || 0)}</span>
-                                            </div>
-                                        </div>
-                                    ))
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}
 
                         {activeTab === 'flashcard' && (
-                            <div className="flashcard-container" style={{ height: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                            <div className="flashcard-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
+                                <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
                                     <button
                                         onClick={() => setReviewMode('due')}
                                         style={{
                                             padding: '6px 16px',
                                             borderRadius: '20px',
                                             border: '1px solid #334155',
-                                            background: reviewMode === 'due' ? '#3b82f6' : 'rgba(30, 41, 59, 0.5)',
+                                            background: reviewMode === 'due' ? '#10b981' : 'rgba(30, 41, 59, 0.5)',
                                             color: '#fff',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
+                                            cursor: 'pointer'
                                         }}
-                                    >智能复习</button>
+                                    >复习到期 ({words.filter(w => {
+                                        if (!w.nextReview) return true
+                                        const reviewDate = w.nextReview.toDate ? w.nextReview.toDate() : new Date(w.nextReview)
+                                        return reviewDate <= new Date()
+                                    }).length})</button>
                                     <button
                                         onClick={() => setReviewMode('all')}
                                         style={{
                                             padding: '6px 16px',
                                             borderRadius: '20px',
                                             border: '1px solid #334155',
-                                            background: reviewMode === 'all' ? '#06b6d4' : 'rgba(30, 41, 59, 0.5)',
+                                            background: reviewMode === 'all' ? '#f59e0b' : 'rgba(30, 41, 59, 0.5)',
                                             color: '#fff',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
+                                            cursor: 'pointer'
                                         }}
-                                    >复习全部</button>
+                                    >随机复习</button>
                                 </div>
 
                                 {reviewQueue.length === 0 ? (
-                                    <div style={{ textAlign: 'center', color: '#fff' }}>
-                                        {reviewMode === 'due' ? (
-                                            <>
-                                                <h3>🎉 现在没有需要复习的单词</h3>
-                                                <p style={{ color: '#94a3b8', marginBottom: '20px' }}>休息一下，或者...</p>
-                                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                                    <button className="secondary-btn" onClick={() => setActiveTab('list')}>查看列表</button>
-                                                    <button className="primary-btn" onClick={() => setReviewMode('all')}>复习所有 ({words.length})</button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <h3>📚 生词本是空的</h3>
-                                                <p style={{ color: '#94a3b8', marginBottom: '20px' }}>快去添加一些生词吧！</p>
-                                                <button className="secondary-btn" onClick={() => setActiveTab('list')}>查看列表</button>
-                                            </>
-                                        )}
+                                    <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: '50px' }}>
+                                        <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎉</div>
+                                        <p>当前没有需要复习的单词</p>
+                                        <p style={{ fontSize: '14px', marginTop: '10px' }}>去添加新词或者试试“随机复习”模式吧</p>
                                     </div>
                                 ) : (
-                                    <>
+                                    <div style={{ width: '100%', maxWidth: '400px', perspective: '1000px' }}>
                                         <div
                                             className="flashcard"
                                             onClick={() => setIsFlipped(!isFlipped)}
                                             style={{
+                                                position: 'relative',
                                                 width: '100%',
-                                                maxWidth: '400px',
                                                 minHeight: '300px',
                                                 maxHeight: '60vh',
-                                                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                                                border: '1px solid #334155',
-                                                borderRadius: '16px',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                position: 'relative',
-                                                perspective: '1000px',
+                                                overflowY: 'auto',
+                                                transformStyle: 'preserve-3d',
                                                 transition: 'transform 0.6s',
-                                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'
+                                                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                                                cursor: 'pointer',
+                                                borderRadius: '16px',
+                                                boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
                                             }}
                                         >
+                                            {/* Front */}
                                             <div style={{
-                                                textAlign: 'center',
-                                                padding: '20px',
-                                                width: '100%',
-                                                height: '100%',
-                                                overflowY: 'auto',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                justifyContent: 'center',
-                                                alignItems: 'center'
+                                                position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden',
+                                                background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                padding: '20px', borderRadius: '16px', border: '1px solid #334155'
                                             }}>
-                                                {!isFlipped ? (
-                                                    <>
-                                                        <h2 style={{
-                                                            fontSize: reviewQueue[currentCardIndex].word.length > 50 ? '18px' : '32px',
-                                                            marginBottom: '10px',
-                                                            color: '#fff',
-                                                            wordBreak: 'break-word',
-                                                            lineHeight: 1.4
-                                                        }}>
-                                                            {reviewQueue[currentCardIndex].word}
-                                                        </h2>
-                                                        <div style={{ color: '#94a3b8', fontSize: '18px' }}>{reviewQueue[currentCardIndex].phonetic}</div>
-                                                        <div style={{ marginTop: '20px', color: '#64748b', fontSize: '14px' }}>(点击翻转)</div>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <h3 style={{ color: '#fff', marginBottom: '10px' }}>{reviewQueue[currentCardIndex].definition}</h3>
+                                                <h2 style={{ fontSize: '32px', color: '#fff', textAlign: 'center', marginBottom: '10px' }}>
+                                                    {reviewQueue[currentCardIndex].word}
+                                                </h2>
+                                                <div style={{ color: '#94a3b8', fontSize: '18px' }}>
+                                                    {reviewQueue[currentCardIndex].phonetic}
+                                                </div>
+                                                <div style={{ marginTop: '20px', color: '#64748b', fontSize: '14px' }}>点击查看释义</div>
+                                            </div>
 
-                                                        {/* Subtitle Context */}
-                                                        {reviewQueue[currentCardIndex].context && (reviewQueue[currentCardIndex].type !== 'sentence' || reviewQueue[currentCardIndex].context.original !== reviewQueue[currentCardIndex].word) && (
-                                                            <div style={{ marginTop: '15px', width: '100%', padding: '0 10px' }}>
-                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>
-                                                                    {reviewQueue[currentCardIndex].source === 'AI Chat' ? '对话原句' : '视频原句'}
-                                                                </div>
-                                                                <div style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '4px' }}>
-                                                                    "{reviewQueue[currentCardIndex].context.original}"
-                                                                </div>
-                                                                {reviewQueue[currentCardIndex].context.translation && (
-                                                                    <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-                                                                        {reviewQueue[currentCardIndex].context.translation}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                            {/* Back */}
+                                            <div style={{
+                                                position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden',
+                                                background: 'linear-gradient(135deg, #334155, #1e293b)',
+                                                transform: 'rotateY(180deg)',
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                padding: '20px', borderRadius: '16px', border: '1px solid #475569'
+                                            }}>
+                                                <h3 style={{ color: '#38bdf8', marginBottom: '10px' }}>{reviewQueue[currentCardIndex].definition}</h3>
 
-                                                        {/* Dictionary Example */}
-                                                        {reviewQueue[currentCardIndex].example && (
-                                                            <div style={{ marginTop: '15px', width: '100%', padding: '0 10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>词典例句</div>
-                                                                <div style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '4px' }}>
-                                                                    {reviewQueue[currentCardIndex].example.en}
-                                                                </div>
-                                                                <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-                                                                    {reviewQueue[currentCardIndex].example.zh || reviewQueue[currentCardIndex].example.cn}
-                                                                </div>
+                                                {/* Context Sentence (Conditional) */}
+                                                {reviewQueue[currentCardIndex].context &&
+                                                    (reviewQueue[currentCardIndex].type !== 'sentence' || reviewQueue[currentCardIndex].context.original !== reviewQueue[currentCardIndex].word) && (
+                                                        <div style={{ marginTop: '15px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px', width: '100%', fontSize: '14px' }}>
+                                                            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+                                                                {reviewQueue[currentCardIndex].source === 'AI Chat' ? '对话原句' : '视频原句'}
                                                             </div>
-                                                        )}
-                                                    </>
+                                                            <div style={{ color: '#e2e8f0', fontStyle: 'italic' }}>"{reviewQueue[currentCardIndex].context.original}"</div>
+                                                            <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{reviewQueue[currentCardIndex].context.translation}</div>
+                                                        </div>
+                                                    )}
+
+                                                {reviewQueue[currentCardIndex].example && (
+                                                    <div style={{ marginTop: '10px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px', width: '100%', fontSize: '14px' }}>
+                                                        <div style={{ color: '#e2e8f0' }}>{reviewQueue[currentCardIndex].example.en}</div>
+                                                        <div style={{ color: '#94a3b8', fontSize: '12px' }}>{reviewQueue[currentCardIndex].example.zh || reviewQueue[currentCardIndex].example.cn}</div>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
 
                                         {isFlipped && (
-                                            <div style={{ display: 'flex', gap: '20px', marginTop: '30px' }}>
+                                            <div style={{ display: 'flex', gap: '20px', marginTop: '30px', justifyContent: 'center' }}>
                                                 <button
-                                                    className="secondary-btn"
-                                                    style={{ padding: '10px 30px', fontSize: '16px', background: '#ef4444', border: 'none', color: 'white' }}
                                                     onClick={() => handleMasteryUpdate(false)}
-                                                >
-                                                    模糊 😵
-                                                </button>
+                                                    style={{
+                                                        padding: '12px 30px', borderRadius: '12px', border: 'none',
+                                                        background: '#ef4444', color: '#fff', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer',
+                                                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)'
+                                                    }}
+                                                >忘记了</button>
                                                 <button
-                                                    className="primary-btn"
-                                                    style={{ padding: '10px 30px', fontSize: '16px', background: '#22c55e', border: 'none', color: 'white' }}
                                                     onClick={() => handleMasteryUpdate(true)}
-                                                >
-                                                    记住了 😎
-                                                </button>
+                                                    style={{
+                                                        padding: '12px 30px', borderRadius: '12px', border: 'none',
+                                                        background: '#10b981', color: '#fff', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer',
+                                                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)'
+                                                    }}
+                                                >记住了</button>
                                             </div>
                                         )}
-
-                                        <div style={{ marginTop: '20px', color: '#64748b' }}>
+                                        <div style={{ textAlign: 'center', marginTop: '20px', color: '#94a3b8' }}>
                                             进度: {currentCardIndex + 1} / {reviewQueue.length}
                                         </div>
-                                    </>
+                                    </div>
                                 )}
                             </div>
                         )}
                     </>
                 )}
             </div>
-            {showRules && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.8)', zIndex: 200,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    backdropFilter: 'blur(5px)'
-                }} onClick={() => setShowRules(false)}>
-                    <div style={{
-                        background: '#1e293b', border: '1px solid #334155', borderRadius: '16px',
-                        padding: '30px', maxWidth: '500px', width: '90%', color: '#fff',
-                        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-                        position: 'relative'
-                    }} onClick={e => e.stopPropagation()}>
-                        <button
-                            onClick={() => setShowRules(false)}
-                            style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}
-                        >×</button>
 
-                        <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            🧠 记忆法则说明
-                        </h2>
-
-                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
-                            我们使用<b>间隔重复系统 (SRS)</b> 来帮助你高效记忆。系统会根据你的掌握程度，智能安排下次复习时间：
-                        </p>
-
-                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', margin: '20px 0' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
-                                <span style={{ color: '#94a3b8' }}>Level 0 (新词)</span>
-                                <span style={{ color: '#fff' }}>立即复习</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
-                                <span style={{ color: '#94a3b8' }}>Level 1 (初识)</span>
-                                <span style={{ color: '#fff' }}>1天后</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
-                                <span style={{ color: '#94a3b8' }}>Level 2 (熟悉)</span>
-                                <span style={{ color: '#fff' }}>3天后</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
-                                <span style={{ color: '#94a3b8' }}>Level 3 (掌握)</span>
-                                <span style={{ color: '#fff' }}>7天后</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
-                                <span style={{ color: '#94a3b8' }}>Level 4 (牢记)</span>
-                                <span style={{ color: '#fff' }}>14天后</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                                <span style={{ color: '#94a3b8' }}>Level 5 (永久)</span>
-                                <span style={{ color: '#fff' }}>30天后</span>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#94a3b8' }}>
-                            <div style={{ flex: 1, padding: '10px', border: '1px solid #334155', borderRadius: '8px' }}>
-                                <strong style={{ color: '#22c55e', display: 'block', marginBottom: '5px' }}>😎 记住了</strong>
-                                等级 +1，复习间隔变长
-                            </div>
-                            <div style={{ flex: 1, padding: '10px', border: '1px solid #334155', borderRadius: '8px' }}>
-                                <strong style={{ color: '#ef4444', display: 'block', marginBottom: '5px' }}>😵 模糊</strong>
-                                等级 -1，复习间隔变短
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Clear All Confirmation Modal */}
+            {/* Clear Confirmation Modal */}
             {showClearModal && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -549,21 +542,21 @@ export default function VocabularyPage() {
                     backdropFilter: 'blur(5px)'
                 }} onClick={() => setShowClearModal(false)}>
                     <div style={{
-                        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                        background: '#0f172a',
                         border: '1px solid #ef4444',
                         borderRadius: '16px',
                         padding: '30px',
                         maxWidth: '400px',
                         width: '90%',
                         color: '#fff',
-                        boxShadow: '0 0 30px rgba(239, 68, 68, 0.3)',
+                        boxShadow: '0 0 50px rgba(239, 68, 68, 0.2)',
                         textAlign: 'center'
                     }} onClick={e => e.stopPropagation()}>
                         <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
-                        <h2 style={{ color: '#ef4444', marginTop: 0, marginBottom: '10px' }}>确定要清空吗？</h2>
-                        <p style={{ color: '#cbd5e1', marginBottom: '30px', lineHeight: '1.5' }}>
-                            这将删除生词本中的所有单词和句子。<br />
-                            <span style={{ color: '#ef4444', fontWeight: 'bold' }}>此操作无法撤销！</span>
+                        <h2 style={{ color: '#ef4444', marginTop: 0 }}>危险操作</h2>
+                        <p style={{ color: '#cbd5e1', marginBottom: '30px' }}>
+                            确定要清空所有生词吗？<br />
+                            此操作<strong style={{ color: '#fff' }}>不可恢复</strong>，所有学习进度都将丢失。
                         </p>
                         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
                             <button
@@ -574,8 +567,7 @@ export default function VocabularyPage() {
                                     border: '1px solid #475569',
                                     background: 'transparent',
                                     color: '#cbd5e1',
-                                    cursor: 'pointer',
-                                    fontSize: '16px'
+                                    cursor: 'pointer'
                                 }}
                             >取消</button>
                             <button
@@ -587,7 +579,6 @@ export default function VocabularyPage() {
                                     background: '#ef4444',
                                     color: '#fff',
                                     cursor: 'pointer',
-                                    fontSize: '16px',
                                     fontWeight: 'bold',
                                     boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)'
                                 }}
@@ -596,13 +587,66 @@ export default function VocabularyPage() {
                     </div>
                 </div>
             )}
-            {/* Stats Modal */}
-            {showStats && (
-                <VocabularyStats words={words} onClose={() => setShowStats(false)} />
+
+            {showStats && <VocabularyStats words={words} onClose={() => setShowStats(false)} />}
+
+            {showRules && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', zIndex: 200,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(5px)'
+                }} onClick={() => setShowRules(false)}>
+                    <div style={{
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '16px',
+                        padding: '30px',
+                        maxWidth: '500px',
+                        width: '90%',
+                        color: '#fff',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                        position: 'relative'
+                    }} onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setShowRules(false)}
+                            style={{
+                                position: 'absolute', top: '15px', right: '15px',
+                                background: 'none', border: 'none',
+                                color: '#94a3b8', fontSize: '20px', cursor: 'pointer'
+                            }}
+                        >×</button>
+                        <h2 style={{ marginTop: 0, color: '#38bdf8' }}>艾宾浩斯复习规则</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e293b', paddingBottom: '10px' }}>
+                                <span>Lv.1 陌生</span>
+                                <span style={{ color: '#94a3b8' }}>1 天后复习</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e293b', paddingBottom: '10px' }}>
+                                <span>Lv.2 认识</span>
+                                <span style={{ color: '#94a3b8' }}>3 天后复习</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e293b', paddingBottom: '10px' }}>
+                                <span>Lv.3 熟悉</span>
+                                <span style={{ color: '#94a3b8' }}>7 天后复习</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e293b', paddingBottom: '10px' }}>
+                                <span>Lv.4 牢记</span>
+                                <span style={{ color: '#94a3b8' }}>15 天后复习</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px' }}>
+                                <span>Lv.5 掌握</span>
+                                <span style={{ color: '#10b981' }}>30 天后复习</span>
+                            </div>
+                        </div>
+                        <p style={{ marginTop: '20px', color: '#64748b', fontSize: '14px' }}>
+                            * 每次复习选择“记住了”会提升等级，选择“忘记了”会重置为 Lv.1
+                        </p>
+                    </div>
+                </div>
             )}
 
             <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
-        </section >
+        </section>
     )
 }
-
