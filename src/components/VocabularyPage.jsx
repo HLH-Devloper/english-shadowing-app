@@ -13,6 +13,7 @@ export default function VocabularyPage() {
     const [activeTab, setActiveTab] = useState('list') // list | flashcard
     const [filterType, setFilterType] = useState('all') // all | word | sentence
     const [showRules, setShowRules] = useState(false)
+    const [showClearModal, setShowClearModal] = useState(false)
     const [toastMsg, setToastMsg] = useState('')
     const [toastType, setToastType] = useState('info')
 
@@ -57,13 +58,17 @@ export default function VocabularyPage() {
         }
     }
 
-    const handleClearAll = async () => {
+    const handleClearAll = () => {
         if (!currentUser) return
-        if (!window.confirm('确定要清空所有生词吗？此操作不可恢复！')) return
+        setShowClearModal(true)
+    }
+
+    const confirmClearAll = async () => {
         try {
             await VocabularyService.clearVocabulary(currentUser.uid)
             setWords([])
             showNotice('生词本已清空', 'success')
+            setShowClearModal(false)
         } catch (error) {
             showNotice('清空失败', 'error')
         }
@@ -523,6 +528,63 @@ export default function VocabularyPage() {
                                 <strong style={{ color: '#ef4444', display: 'block', marginBottom: '5px' }}>😵 模糊</strong>
                                 等级 -1，复习间隔变短
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Clear All Confirmation Modal */}
+            {showClearModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', zIndex: 200,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(5px)'
+                }} onClick={() => setShowClearModal(false)}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                        border: '1px solid #ef4444',
+                        borderRadius: '16px',
+                        padding: '30px',
+                        maxWidth: '400px',
+                        width: '90%',
+                        color: '#fff',
+                        boxShadow: '0 0 30px rgba(239, 68, 68, 0.3)',
+                        textAlign: 'center'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+                        <h2 style={{ color: '#ef4444', marginTop: 0, marginBottom: '10px' }}>确定要清空吗？</h2>
+                        <p style={{ color: '#cbd5e1', marginBottom: '30px', lineHeight: '1.5' }}>
+                            这将删除生词本中的所有单词和句子。<br />
+                            <span style={{ color: '#ef4444', fontWeight: 'bold' }}>此操作无法撤销！</span>
+                        </p>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setShowClearModal(false)}
+                                style={{
+                                    padding: '10px 24px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #475569',
+                                    background: 'transparent',
+                                    color: '#cbd5e1',
+                                    cursor: 'pointer',
+                                    fontSize: '16px'
+                                }}
+                            >取消</button>
+                            <button
+                                onClick={confirmClearAll}
+                                style={{
+                                    padding: '10px 24px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: '#ef4444',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)'
+                                }}
+                            >确认清空</button>
                         </div>
                     </div>
                 </div>
