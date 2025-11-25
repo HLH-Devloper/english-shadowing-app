@@ -994,6 +994,19 @@ export default function ConversationPage() {
     synthRef.current.speak(utterance)
   }
 
+  // Auto-speak initial message for new sessions
+  useEffect(() => {
+    if (!sessionId) {
+      const initMsg = messages.find(m => m.id === 'init')
+      if (initMsg) {
+        // Small delay to ensure browser is ready
+        setTimeout(() => {
+          speakText(initMsg.text, initMsg.id)
+        }, 500)
+      }
+    }
+  }, [])
+
   const handleTranslate = async (index, text) => {
     // If already translated, return existing translation
     if (messages[index].translation) return messages[index].translation
