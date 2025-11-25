@@ -548,16 +548,7 @@ export default function VocabularyStats({ words, onClose }) {
 
                         {/* Footer */}
                         <div style={{ textAlign: 'center', width: '100%' }}>
-                            <div style={{
-                                width: '80px', height: '80px', background: '#fff', margin: '0 auto 15px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px'
-                            }}>
-                                {/* Placeholder QR Code */}
-                                <div style={{ width: '70px', height: '70px', background: '#000' }}></div>
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#64748b' }}>
-                                Scan to join me
-                            </div>
+
                             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginTop: '5px' }}>
                                 SpeakDuck 英语跟读
                             </div>
