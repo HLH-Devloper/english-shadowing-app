@@ -13,7 +13,7 @@ export default function VocabularyStats({ words, onClose }) {
             date.setDate(now.getDate() + i)
             days.push({
                 date: date,
-                label: i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' }),
+                label: i === 0 ? '今天' : date.toLocaleDateString('zh-CN', { weekday: 'short' }).replace('周', '周'),
                 count: 0
             })
         }
@@ -77,7 +77,7 @@ export default function VocabularyStats({ words, onClose }) {
                 >×</button>
 
                 <h2 style={{ marginTop: 0, marginBottom: '30px', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    📊 Review Forecast
+                    📊 复习预测
                 </h2>
 
                 <div style={{
@@ -145,7 +145,7 @@ export default function VocabularyStats({ words, onClose }) {
                 </div>
 
                 <div style={{ marginTop: '20px', fontSize: '14px', color: '#94a3b8', textAlign: 'center' }}>
-                    Total words to review in next 7 days: <strong style={{ color: '#fff' }}>{chartData.reduce((a, b) => a + b.count, 0)}</strong>
+                    未来 7 天需复习总数: <strong style={{ color: '#fff' }}>{chartData.reduce((a, b) => a + b.count, 0)}</strong>
                 </div>
             </div>
         </div>
