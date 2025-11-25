@@ -445,8 +445,7 @@ export default function VocabularyPage() {
                                                 position: 'relative',
                                                 width: '100%',
                                                 minHeight: '300px',
-                                                maxHeight: '60vh',
-                                                overflowY: 'auto',
+                                                height: '60vh', // Fixed height for 3D container
                                                 transformStyle: 'preserve-3d',
                                                 transition: 'transform 0.6s',
                                                 transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
@@ -462,7 +461,8 @@ export default function VocabularyPage() {
                                                 background: 'linear-gradient(135deg, #1e293b, #0f172a)',
                                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                                 padding: '20px', borderRadius: '16px', border: '1px solid #334155',
-                                                zIndex: isFlipped ? 0 : 1
+                                                zIndex: isFlipped ? 0 : 1,
+                                                overflowY: 'auto' // Move scroll here
                                             }}>
                                                 <h2 style={{ fontSize: '32px', color: '#fff', textAlign: 'center', marginBottom: '10px' }}>
                                                     {reviewQueue[currentCardIndex].word}
@@ -481,7 +481,8 @@ export default function VocabularyPage() {
                                                 transform: 'rotateY(180deg)',
                                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                                 padding: '20px', borderRadius: '16px', border: '1px solid #475569',
-                                                zIndex: isFlipped ? 1 : 0
+                                                zIndex: isFlipped ? 1 : 0,
+                                                overflowY: 'auto' // Move scroll here
                                             }}>
                                                 <h3 style={{ color: '#38bdf8', marginBottom: '10px' }}>{reviewQueue[currentCardIndex].definition}</h3>
 
