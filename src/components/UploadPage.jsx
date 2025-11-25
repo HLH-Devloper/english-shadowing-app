@@ -277,50 +277,10 @@ export default function UploadPage() {
         )}
 
         {activeTab === 'ted' && (
-          <div className="bento-grid">
-            <div className="bento-card" style={{ cursor: 'default', alignItems: 'center', textAlign: 'center', justifyContent: 'center', minHeight: '200px' }}>
-              <div className="upload-icon-circle">📺</div>
-              <h3 className="upload-title">在线视频跟读</h3>
-              <p className="upload-desc">支持 YouTube / TED 链接</p>
-
-              <div style={{ marginTop: '20px', width: '100%', maxWidth: '400px' }}>
-                <input
-                  type="text"
-                  className="ted-url-input"
-                  placeholder="粘贴 YouTube 或 TED 视频链接..."
-                  value={tedUrl}
-                  onChange={(e) => setTedUrl(e.target.value)}
-                  style={{
-                    width: '100%',
-                    marginBottom: '12px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: '#fff'
-                  }}
-                />
-                <button
-                  className="start-learning-btn"
-                  style={{ width: '100%', marginTop: '0' }}
-                  onClick={() => {
-                    if (!tedUrl) return;
-                    // 尝试解析 YouTube
-                    const ytReg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-                    const ytMatch = tedUrl.match(ytReg);
-                    const ytId = (ytMatch && ytMatch[2].length === 11) ? ytMatch[2] : null;
-
-                    if (ytId) {
-                      navigate('/player', { state: { useYoutubeEmbed: true, youtubeVideoId: ytId } });
-                      return;
-                    }
-
-                    // 尝试解析 TED
-                    openTedInPlayer(tedUrl);
-                  }}
-                >
-                  开始跟读
-                </button>
-              </div>
-            </div>
+          <div className="coming-soon-state" style={{ padding: '100px', textAlign: 'center', color: '#fff' }}>
+            <div className="lock-icon" style={{ fontSize: '64px', marginBottom: '20px' }}>🔒</div>
+            <h3>功能开发中</h3>
+            <p style={{ color: '#a1a1aa' }}>我们正在努力适配该功能，敬请期待！</p>
           </div>
         )}
 
