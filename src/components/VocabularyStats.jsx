@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 
 export default function VocabularyStats({ words, onClose }) {
-    const [activeTab, setActiveTab] = useState('forecast') // 'forecast' | 'mastery'
+    const [activeTab, setActiveTab] = useState('forecast') // 'forecast' | 'mastery' | 'activity'
 
     // Calculate forecast data
     const chartData = useMemo(() => {
@@ -67,6 +67,51 @@ export default function VocabularyStats({ words, onClose }) {
         return distribution
     }, [words])
 
+    // Calculate activity heatmap data (last 20 weeks)
+    const activityData = useMemo(() => {
+        const weeks = 20
+        const days = weeks * 7
+        const data = []
+        const now = new Date()
+        now.setHours(0, 0, 0, 0)
+
+        // Create map of date -> count
+        const dateCountMap = {}
+        words.forEach(word => {
+            if (word.createdAt) {
+                const date = word.createdAt.toDate ? word.createdAt.toDate() : new Date(word.createdAt)
+                const dateStr = date.toDateString()
+                dateCountMap[dateStr] = (dateCountMap[dateStr] || 0) + 1
+            }
+        })
+
+        // Generate grid data (going back 'days' days)
+        // We want to start on a Sunday to align with the grid usually
+        // But for simplicity, let's just show the last N days
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date(now)
+            date.setDate(now.getDate() - i)
+            const dateStr = date.toDateString()
+            const count = dateCountMap[dateStr] || 0
+
+            // Determine intensity (0-4)
+            let intensity = 0
+            if (count > 0) intensity = 1
+            if (count > 2) intensity = 2
+            if (count > 5) intensity = 3
+            if (count > 10) intensity = 4
+
+            data.push({
+                date: date,
+                count: count,
+                intensity: intensity,
+                dateLabel: date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+            })
+        }
+
+        return data
+    }, [words])
+
     const maxCount = Math.max(...chartData.map(d => d.count), 1) // Avoid divide by zero
 
     // Calculate conic gradient for donut chart
@@ -83,6 +128,17 @@ export default function VocabularyStats({ words, onClose }) {
         return `conic-gradient(${gradients.join(', ')})`
     }
 
+    const getIntensityColor = (intensity) => {
+        switch (intensity) {
+            case 0: return '#1e293b' // Dark (empty)
+            case 1: return '#064e3b' // Very dark green
+            case 2: return '#065f46' // Dark green
+            case 3: return '#10b981' // Green
+            case 4: return '#34d399' // Bright green
+            default: return '#1e293b'
+        }
+    }
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -91,7 +147,7 @@ export default function VocabularyStats({ words, onClose }) {
             backdropFilter: 'blur(5px)'
         }} onClick={onClose}>
             <div style={{
-                background: '#1e293b',
+                background: '#0f172a',
                 border: '1px solid #334155',
                 borderRadius: '16px',
                 padding: '30px',
@@ -102,7 +158,7 @@ export default function VocabularyStats({ words, onClose }) {
                 position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: '400px'
+                minHeight: '450px'
             }} onClick={e => e.stopPropagation()}>
                 <button
                     onClick={onClose}
@@ -113,34 +169,52 @@ export default function VocabularyStats({ words, onClose }) {
                     }}
                 >×</button>
 
-                <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
+                <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', overflowX: 'auto', paddingBottom: '5px' }}>
                     <h2
                         onClick={() => setActiveTab('forecast')}
                         style={{
                             marginTop: 0, marginBottom: 0,
                             color: activeTab === 'forecast' ? '#38bdf8' : '#64748b',
                             cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '10px',
+                            display: 'flex', alignItems: 'center', gap: '8px',
                             borderBottom: activeTab === 'forecast' ? '2px solid #38bdf8' : 'none',
-                            paddingBottom: '5px'
+                            paddingBottom: '5px',
+                            fontSize: '18px',
+                            whiteSpace: 'nowrap'
                         }}>
-                        📊 复习预测
+                        📊 预测
                     </h2>
                     <h2
                         onClick={() => setActiveTab('mastery')}
                         style={{
                             marginTop: 0, marginBottom: 0,
-                            color: activeTab === 'mastery' ? '#10b981' : '#64748b',
+                            color: activeTab === 'mastery' ? '#8b5cf6' : '#64748b',
                             cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '10px',
-                            borderBottom: activeTab === 'mastery' ? '2px solid #10b981' : 'none',
-                            paddingBottom: '5px'
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            borderBottom: activeTab === 'mastery' ? '2px solid #8b5cf6' : 'none',
+                            paddingBottom: '5px',
+                            fontSize: '18px',
+                            whiteSpace: 'nowrap'
                         }}>
-                        🍩 掌握分布
+                        🍩 分布
+                    </h2>
+                    <h2
+                        onClick={() => setActiveTab('activity')}
+                        style={{
+                            marginTop: 0, marginBottom: 0,
+                            color: activeTab === 'activity' ? '#10b981' : '#64748b',
+                            cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            borderBottom: activeTab === 'activity' ? '2px solid #10b981' : 'none',
+                            paddingBottom: '5px',
+                            fontSize: '18px',
+                            whiteSpace: 'nowrap'
+                        }}>
+                        📅 热力
                     </h2>
                 </div>
 
-                {activeTab === 'forecast' ? (
+                {activeTab === 'forecast' && (
                     <>
                         <div style={{
                             display: 'flex',
@@ -210,8 +284,10 @@ export default function VocabularyStats({ words, onClose }) {
                             未来 7 天需复习总数: <strong style={{ color: '#fff' }}>{chartData.reduce((a, b) => a + b.count, 0)}</strong>
                         </div>
                     </>
-                ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '40px', marginTop: '20px' }}>
+                )}
+
+                {activeTab === 'mastery' && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '40px', marginTop: '20px', flexWrap: 'wrap' }}>
                         {/* Donut Chart */}
                         <div style={{
                             width: '200px',
@@ -229,7 +305,7 @@ export default function VocabularyStats({ words, onClose }) {
                                 width: '140px',
                                 height: '140px',
                                 borderRadius: '50%',
-                                background: '#1e293b',
+                                background: '#0f172a',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
@@ -254,6 +330,45 @@ export default function VocabularyStats({ words, onClose }) {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'activity' && (
+                    <div style={{ marginTop: '10px' }}>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(20, 1fr)', // 20 weeks
+                            gap: '4px',
+                            justifyContent: 'center'
+                        }}>
+                            {activityData.map((day, index) => (
+                                <div
+                                    key={index}
+                                    title={`${day.dateLabel}: ${day.count} 个单词`}
+                                    style={{
+                                        width: '100%',
+                                        paddingBottom: '100%', // Square aspect ratio
+                                        background: getIntensityColor(day.intensity),
+                                        borderRadius: '2px',
+                                        cursor: 'pointer',
+                                        position: 'relative'
+                                    }}
+                                >
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '5px', marginTop: '15px', fontSize: '12px', color: '#94a3b8' }}>
+                            <span>少</span>
+                            <div style={{ width: '10px', height: '10px', background: '#1e293b', borderRadius: '2px' }}></div>
+                            <div style={{ width: '10px', height: '10px', background: '#064e3b', borderRadius: '2px' }}></div>
+                            <div style={{ width: '10px', height: '10px', background: '#065f46', borderRadius: '2px' }}></div>
+                            <div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '2px' }}></div>
+                            <div style={{ width: '10px', height: '10px', background: '#34d399', borderRadius: '2px' }}></div>
+                            <span>多</span>
+                        </div>
+                        <p style={{ textAlign: 'center', color: '#64748b', fontSize: '12px', marginTop: '20px' }}>
+                            展示最近 20 周的学习活跃度
+                        </p>
                     </div>
                 )}
             </div>
