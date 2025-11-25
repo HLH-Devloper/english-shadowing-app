@@ -457,10 +457,12 @@ export default function VocabularyPage() {
                                         >
                                             {/* Front */}
                                             <div style={{
-                                                position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden',
+                                                position: 'absolute', width: '100%', height: '100%',
+                                                backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
                                                 background: 'linear-gradient(135deg, #1e293b, #0f172a)',
                                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                                padding: '20px', borderRadius: '16px', border: '1px solid #334155'
+                                                padding: '20px', borderRadius: '16px', border: '1px solid #334155',
+                                                zIndex: isFlipped ? 0 : 1
                                             }}>
                                                 <h2 style={{ fontSize: '32px', color: '#fff', textAlign: 'center', marginBottom: '10px' }}>
                                                     {reviewQueue[currentCardIndex].word}
@@ -473,11 +475,13 @@ export default function VocabularyPage() {
 
                                             {/* Back */}
                                             <div style={{
-                                                position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden',
+                                                position: 'absolute', width: '100%', height: '100%',
+                                                backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
                                                 background: 'linear-gradient(135deg, #334155, #1e293b)',
                                                 transform: 'rotateY(180deg)',
                                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                                padding: '20px', borderRadius: '16px', border: '1px solid #475569'
+                                                padding: '20px', borderRadius: '16px', border: '1px solid #475569',
+                                                zIndex: isFlipped ? 1 : 0
                                             }}>
                                                 <h3 style={{ color: '#38bdf8', marginBottom: '10px' }}>{reviewQueue[currentCardIndex].definition}</h3>
 
