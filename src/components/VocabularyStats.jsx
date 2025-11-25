@@ -454,7 +454,7 @@ export default function VocabularyStats({ words, onClose }) {
                                 <span>多</span>
                             </div>
                             <p style={{ textAlign: 'center', color: '#64748b', fontSize: '12px', marginTop: '20px' }}>
-                                展示最近 20 周的学习活跃度 (GitHub 风格)
+                                展示最近 20 周的学习活跃度
                             </p>
                         </div>
                     )}
