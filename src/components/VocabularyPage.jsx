@@ -57,6 +57,18 @@ export default function VocabularyPage() {
         }
     }
 
+    const handleClearAll = async () => {
+        if (!currentUser) return
+        if (!window.confirm('确定要清空所有生词吗？此操作不可恢复！')) return
+        try {
+            await VocabularyService.clearVocabulary(currentUser.uid)
+            setWords([])
+            showNotice('生词本已清空', 'success')
+        } catch (error) {
+            showNotice('清空失败', 'error')
+        }
+    }
+
     // --- Flashcard Logic ---
     const [currentCardIndex, setCurrentCardIndex] = useState(0)
     const [isFlipped, setIsFlipped] = useState(false)
@@ -158,6 +170,12 @@ export default function VocabularyPage() {
                     <div className={`cyber-nav-item ${activeTab === 'flashcard' ? 'active' : ''}`} onClick={() => setActiveTab('flashcard')}>卡片复习</div>
                 </div>
                 <div className="cyber-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    {words.length > 0 && (
+                        <button
+                            onClick={handleClearAll}
+                            style={{ background: 'none', border: '1px solid rgba(239, 68, 68, 0.5)', borderRadius: '4px', padding: '2px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}
+                        >清空</button>
+                    )}
                     <button
                         onClick={() => setShowRules(true)}
                         style={{ background: 'none', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '50%', width: '24px', height: '24px', color: '#fff', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -167,7 +185,7 @@ export default function VocabularyPage() {
                 </div>
             </header>
 
-            <div className="cyber-content" style={{ padding: '100px 20px 20px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+            <div className="cyber-content" style={{ padding: '120px 20px 40px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
                 {loading ? (
                     <div style={{ color: '#fff', textAlign: 'center', marginTop: '50px' }}>加载中...</div>
                 ) : (
@@ -252,8 +270,11 @@ export default function VocabularyPage() {
                                                 >🗑️</button>
                                             </div>
 
-                                            {word.context && (
+                                            {word.context && (word.type !== 'sentence' || word.context.original !== word.word) && (
                                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', fontSize: '14px' }}>
+                                                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>
+                                                        {word.source === 'AI Chat' ? '对话原句' : '视频原句'}
+                                                    </div>
                                                     <div style={{ color: '#e2e8f0' }}>"{word.context.original}"</div>
                                                     <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{word.context.translation}</div>
                                                 </div>
@@ -332,7 +353,8 @@ export default function VocabularyPage() {
                                             style={{
                                                 width: '100%',
                                                 maxWidth: '400px',
-                                                height: '300px',
+                                                minHeight: '300px',
+                                                maxHeight: '60vh',
                                                 background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
                                                 border: '1px solid #334155',
                                                 borderRadius: '16px',
@@ -377,9 +399,11 @@ export default function VocabularyPage() {
                                                         <h3 style={{ color: '#fff', marginBottom: '10px' }}>{reviewQueue[currentCardIndex].definition}</h3>
 
                                                         {/* Subtitle Context */}
-                                                        {reviewQueue[currentCardIndex].context && (
+                                                        {reviewQueue[currentCardIndex].context && (reviewQueue[currentCardIndex].type !== 'sentence' || reviewQueue[currentCardIndex].context.original !== reviewQueue[currentCardIndex].word) && (
                                                             <div style={{ marginTop: '15px', width: '100%', padding: '0 10px' }}>
-                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>视频原句</div>
+                                                                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>
+                                                                    {reviewQueue[currentCardIndex].source === 'AI Chat' ? '对话原句' : '视频原句'}
+                                                                </div>
                                                                 <div style={{ fontStyle: 'italic', color: '#cbd5e1', marginBottom: '4px' }}>
                                                                     "{reviewQueue[currentCardIndex].context.original}"
                                                                 </div>

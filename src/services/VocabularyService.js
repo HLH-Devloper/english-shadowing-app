@@ -133,5 +133,21 @@ export const VocabularyService = {
             console.error('Error deleting word:', error)
             throw error
         }
+    },
+    /**
+     * 清空生词本
+     */
+    async clearVocabulary(userId) {
+        if (!userId) return
+        try {
+            const q = query(collection(db, 'users', userId, COLLECTION_NAME))
+            const snapshot = await getDocs(q)
+            const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref))
+            await Promise.all(deletePromises)
+            return { success: true }
+        } catch (error) {
+            console.error('Error clearing vocabulary:', error)
+            throw new Error('清空失败，请稍后重试')
+        }
     }
 }
