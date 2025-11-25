@@ -1,7 +1,10 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useRef } from 'react'
+import html2canvas from 'html2canvas'
 
 export default function VocabularyStats({ words, onClose }) {
     const [activeTab, setActiveTab] = useState('forecast') // 'forecast' | 'mastery' | 'activity'
+    const [isGenerating, setIsGenerating] = useState(false)
+    const shareCardRef = useRef(null)
 
     // Calculate forecast data
     const chartData = useMemo(() => {
@@ -86,8 +89,6 @@ export default function VocabularyStats({ words, onClose }) {
         })
 
         // Generate grid data (going back 'days' days)
-        // We want to start on a Sunday to align with the grid usually
-        // But for simplicity, let's just show the last N days
         for (let i = days - 1; i >= 0; i--) {
             const date = new Date(now)
             date.setDate(now.getDate() - i)
@@ -139,6 +140,26 @@ export default function VocabularyStats({ words, onClose }) {
         }
     }
 
+    const handleShare = async () => {
+        if (!shareCardRef.current) return
+        setIsGenerating(true)
+        try {
+            const canvas = await html2canvas(shareCardRef.current, {
+                backgroundColor: '#0f172a',
+                scale: 2 // High resolution
+            })
+            const link = document.createElement('a')
+            link.download = `speakduck-stats-${new Date().toISOString().slice(0, 10)}.png`
+            link.href = canvas.toDataURL('image/png')
+            link.click()
+        } catch (error) {
+            console.error('Failed to generate image:', error)
+            alert('生成图片失败，请重试')
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -160,6 +181,7 @@ export default function VocabularyStats({ words, onClose }) {
                 flexDirection: 'column',
                 minHeight: '450px'
             }} onClick={e => e.stopPropagation()}>
+                {/* Close Button */}
                 <button
                     onClick={onClose}
                     style={{
@@ -168,6 +190,20 @@ export default function VocabularyStats({ words, onClose }) {
                         color: '#94a3b8', fontSize: '20px', cursor: 'pointer', zIndex: 10
                     }}
                 >×</button>
+
+                {/* Share Button */}
+                <button
+                    onClick={handleShare}
+                    disabled={isGenerating}
+                    style={{
+                        position: 'absolute', top: '15px', right: '50px',
+                        background: 'none', border: '1px solid #334155', borderRadius: '8px',
+                        color: '#38bdf8', fontSize: '14px', cursor: 'pointer', zIndex: 10,
+                        padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '5px'
+                    }}
+                >
+                    {isGenerating ? '生成中...' : '📷 分享'}
+                </button>
 
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', overflowX: 'auto', paddingBottom: '5px' }}>
                     <h2
@@ -371,6 +407,96 @@ export default function VocabularyStats({ words, onClose }) {
                         </p>
                     </div>
                 )}
+            </div>
+
+            {/* Hidden Share Card for Image Generation */}
+            <div
+                ref={shareCardRef}
+                style={{
+                    position: 'fixed',
+                    left: '-9999px', // Hide from view
+                    top: 0,
+                    width: '375px', // Mobile width
+                    height: '667px', // Mobile height
+                    background: '#0f172a',
+                    padding: '30px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontFamily: 'sans-serif',
+                    color: '#fff',
+                    backgroundImage: 'radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 70%)'
+                }}
+            >
+                {/* Header */}
+                <div style={{ textAlign: 'center', width: '100%' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#38bdf8', marginBottom: '10px' }}>
+                        SpeakDuck
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#94a3b8', letterSpacing: '2px' }}>
+                        MY VOCABULARY JOURNEY
+                    </div>
+                    <div style={{ width: '50px', height: '2px', background: '#38bdf8', margin: '20px auto' }}></div>
+                </div>
+
+                {/* Main Stats */}
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>
+                        <div style={{ fontSize: '14px', color: '#cbd5e1' }}>总词汇量</div>
+                        <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fff' }}>{words.length}</div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>
+                        <div style={{ fontSize: '14px', color: '#cbd5e1' }}>已掌握 (Lv.5)</div>
+                        <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#10b981' }}>
+                            {masteryData.find(d => d.level === 5)?.count || 0}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mini Heatmap */}
+                <div style={{ width: '100%' }}>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '10px', textAlign: 'center' }}>
+                        最近学习热力
+                    </div>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(10, 1fr)', // Show last 10 weeks for card
+                        gap: '4px',
+                        justifyContent: 'center'
+                    }}>
+                        {activityData.slice(0, 70).map((day, index) => ( // Show last 70 days (10 weeks)
+                            <div
+                                key={index}
+                                style={{
+                                    width: '100%',
+                                    paddingBottom: '100%',
+                                    background: getIntensityColor(day.intensity),
+                                    borderRadius: '2px'
+                                }}
+                            >
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div style={{ textAlign: 'center', width: '100%' }}>
+                    <div style={{
+                        width: '80px', height: '80px', background: '#fff', margin: '0 auto 15px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px'
+                    }}>
+                        {/* Placeholder QR Code */}
+                        <div style={{ width: '70px', height: '70px', background: '#000' }}></div>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        Scan to join me
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginTop: '5px' }}>
+                        SpeakDuck 英语跟读
+                    </div>
+                </div>
             </div>
         </div>
     )
