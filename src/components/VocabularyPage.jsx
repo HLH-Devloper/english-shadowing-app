@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../firebase'
 import { VocabularyService } from '../services/VocabularyService'
+import VocabularyStats from './VocabularyStats'
 import Toast from './Toast'
 
 export default function VocabularyPage() {
@@ -13,6 +14,7 @@ export default function VocabularyPage() {
     const [activeTab, setActiveTab] = useState('list') // list | flashcard
     const [filterType, setFilterType] = useState('all') // all | word | sentence
     const [showRules, setShowRules] = useState(false)
+    const [showStats, setShowStats] = useState(false)
     const [showClearModal, setShowClearModal] = useState(false)
     const [toastMsg, setToastMsg] = useState('')
     const [toastType, setToastType] = useState('info')
@@ -181,6 +183,11 @@ export default function VocabularyPage() {
                             style={{ background: 'none', border: '1px solid rgba(239, 68, 68, 0.5)', borderRadius: '4px', padding: '2px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}
                         >清空</button>
                     )}
+                    <button
+                        onClick={() => setShowStats(true)}
+                        style={{ background: 'none', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '50%', width: '24px', height: '24px', color: '#fff', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="统计数据"
+                    >📊</button>
                     <button
                         onClick={() => setShowRules(true)}
                         style={{ background: 'none', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '50%', width: '24px', height: '24px', color: '#fff', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -589,7 +596,13 @@ export default function VocabularyPage() {
                     </div>
                 </div>
             )}
+            {/* Stats Modal */}
+            {showStats && (
+                <VocabularyStats words={words} onClose={() => setShowStats(false)} />
+            )}
+
             <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
         </section >
     )
 }
+
