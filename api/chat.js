@@ -175,6 +175,11 @@ CRITICAL EXCEPTION FOR FIRST LETTER CASE:
 - Example: "i go" -> Correct "i" to "I" (because "I" is a pronoun, not just start of sentence).
 - Example: "china" -> Correct to "China" (proper noun).
 
+CRITICAL EXCEPTION FOR PUNCTUATION:
+- IGNORE missing punctuation (periods, commas) at the end of sentences or between clauses.
+- Voice input often lacks punctuation. Do NOT correct this unless it causes severe ambiguity.
+- Example: "i want to go home" -> Accept as correct (DO NOT correct to "I want to go home.").
+
 CRITICAL REQUIREMENT FOR SUGGESTIONS (MANDATORY - DO NOT SKIP):
 You MUST append ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"] to the end of EVERY response.
 - EVERY single response must have suggestions, without exception
