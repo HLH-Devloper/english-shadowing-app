@@ -938,6 +938,12 @@ export default function ConversationPage() {
 
   // Auto-speak initial message for new sessions
   useEffect(() => {
+    // Wait for membership check to complete
+    if (isMember === null) return
+
+    // If not a member, do not speak
+    if (isMember === false) return
+
     if (!sessionId) {
       const initMsg = messages.find(m => m.id === 'init')
       if (initMsg) {
@@ -947,7 +953,7 @@ export default function ConversationPage() {
         }, 500)
       }
     }
-  }, [])
+  }, [isMember])
 
   const handleTranslate = async (index, text) => {
     // If already translated, return existing translation
@@ -1318,15 +1324,7 @@ export default function ConversationPage() {
             </SuggestionContainer>
           )}
 
-          {suggestions.length > 0 && (
-            <SuggestionContainer>
-              {suggestions.map((sugg, i) => (
-                <SuggestionChip key={i} onClick={() => setInputText(sugg)}>
-                  {sugg}
-                </SuggestionChip>
-              ))}
-            </SuggestionContainer>
-          )}
+
 
           <InputGroup>
             {isListening ? (
