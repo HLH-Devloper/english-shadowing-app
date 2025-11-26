@@ -888,6 +888,12 @@ export default function ConversationPage() {
     }
   }
 
+  const cancelRecording = () => {
+    stopRecording()
+    setInputText('')
+    audioChunksRef.current = []
+  }
+
   const sendRecording = () => {
     // Set sending flag to true to block any late speech results
     isSendingRef.current = true
