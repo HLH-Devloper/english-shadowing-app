@@ -163,6 +163,12 @@ CRITICAL REQUIREMENT FOR ERROR DETECTION:
 - DO NOT skip any errors, even minor ones
 - Even if the meaning is clear, point out ALL mistakes
 
+SANITY CHECK (CRITICAL):
+- Before outputting a correction, CHECK: Is the "Correct" version different from the "Wrong" version?
+- If "Wrong" == "Correct", DO NOT output the correction.
+- Example: If user said "good food" and you think it should be "good food", DO NOT mention it.
+- Avoid stylistic nitpicking if the grammar is correct and natural.
+
 CRITICAL EXCEPTION FOR FIRST LETTER CASE:
 - IGNORE capitalization errors for the very first letter of the sentence.
 - Example: "hello world" -> Accept as correct (DO NOT correct "hello" to "Hello").
