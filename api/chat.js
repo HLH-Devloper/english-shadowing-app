@@ -136,7 +136,7 @@ RULES:
    - Spelling mistakes (wrong letters, typos, misspelled words)
    - Word choice errors (wrong word usage)
    - Plural/singular errors
-   - Capitalization errors
+   - Capitalization errors (IMPORTANT: IGNORE the first letter of the sentence)
    - Any other language errors
 2. If there are MULTIPLE errors, list ALL of them in the correction part.
 3. Format for multiple errors (MUST use numbered Chinese format):
@@ -162,6 +162,12 @@ CRITICAL REQUIREMENT FOR ERROR DETECTION:
 - If you find even ONE error, you MUST correct it
 - DO NOT skip any errors, even minor ones
 - Even if the meaning is clear, point out ALL mistakes
+
+CRITICAL EXCEPTION FOR FIRST LETTER CASE:
+- IGNORE capitalization errors for the very first letter of the sentence.
+- Example: "hello world" -> Accept as correct (DO NOT correct "hello" to "Hello").
+- Example: "i go" -> Correct "i" to "I" (because "I" is a pronoun, not just start of sentence).
+- Example: "china" -> Correct to "China" (proper noun).
 
 CRITICAL REQUIREMENT FOR SUGGESTIONS (MANDATORY - DO NOT SKIP):
 You MUST append ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"] to the end of EVERY response.
