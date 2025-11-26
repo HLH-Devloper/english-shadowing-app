@@ -72,7 +72,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing request body' });
         }
 
-        const { messages, scenario = 'Just Vibe', difficulty = 'Intermediate' } = req.body;
+        const { messages, scenario = 'Just Vibe', difficulty = 'Intermediate', audio } = req.body;
 
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
             return res.status(400).json({ error: 'Invalid or empty messages array' });
@@ -198,8 +198,8 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
         const triedModels = [];
         const lastMessageText = messages[messages.length - 1].text;
 
-        if (!lastMessageText || lastMessageText.trim() === '') {
-            throw new Error('Last message text is empty');
+        if ((!lastMessageText || lastMessageText.trim() === '') && !audio) {
+            throw new Error('Last message text is empty and no audio provided');
         }
 
         // Check if this is a translation request
@@ -274,10 +274,23 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
 
                         const chat = model.startChat({
                             history: history,
-                            generationConfig: { maxOutputTokens: 500 },
+                            generationConfig: {
+                                temperature: 0.3, // Low temperature for strict correction
+                            },
                         });
 
-                        const result = await chat.sendMessage(lastMessageText);
+                        let result;
+                        if (audio) {
+                            // Multimodal: Send audio
+                            result = await chat.sendMessage([
+                                { text: "Please listen to this audio and correct my English based on the system instructions." },
+                                { inlineData: { mimeType: "audio/webm", data: audio } }
+                            ]);
+                        } else {
+                            // Text-only
+                            result = await chat.sendMessage(lastMessageText);
+                        }
+
                         const response = await result.response;
                         text = response.text();
                     }
@@ -291,7 +304,7 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
         }
 
         // --- LEVEL 2: Try OpenRouter Fallback ---
-        if (!text && process.env.OPENROUTER_API_KEY) {
+        if (!text && process.env.OPENROUTER_API_KEY && !audio) {
             console.log("Gemini failed, attempting OpenRouter fallback...");
 
             // For translation, we just send the text. For chat, we send history.

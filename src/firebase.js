@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 // 使用 Vite 环境变量，请在 .env.local 中配置以下键：
 // VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID,
@@ -17,20 +18,6 @@ const firebaseConfig = {
 
 // 调试：在开发模式下输出关键环境变量是否已加载（不包含敏感完整值）
 if (import.meta.env.DEV) {
-  const hasKey = Boolean(import.meta.env.VITE_FIREBASE_API_KEY)
-  // 仅显示是否存在以避免泄露完整值
-  console.log('[firebase env] apiKey loaded:', hasKey)
-}
-
-const app = initializeApp(firebaseConfig)
-export const auth = getAuth(app)
-export const db = getFirestore(app)
-
-// 将认证邮件语言设置为中文，以便用户收到中文正文内容
-auth.languageCode = 'zh-CN'
-
-// 已登录用户修改密码：需要使用当前密码进行“近期登录”重新验证
-export async function changePassword(currentPassword, newPassword) {
   const user = auth.currentUser
   if (!user) throw new Error('not_logged_in')
   if (!user.email) throw new Error('missing_email')

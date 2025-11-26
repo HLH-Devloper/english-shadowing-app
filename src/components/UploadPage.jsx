@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import Toast from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import MembershipModal from './MembershipModal'
+import { friendsEpisodes } from '../data/friends_data'
 
 export default function UploadPage() {
   // 使用本地状态记录上传的文件与是否可开始学习
@@ -285,10 +286,21 @@ export default function UploadPage() {
         )}
 
         {activeTab === 'movie' && (
-          <div className="coming-soon-state" style={{ padding: '100px', textAlign: 'center', color: '#fff' }}>
-            <div className="lock-icon" style={{ fontSize: '64px', marginBottom: '20px' }}>🔒</div>
-            <h3>功能开发中</h3>
-            <p style={{ color: '#a1a1aa' }}>我们正在努力适配该功能，敬请期待！</p>
+          <div className="bento-grid">
+            {friendsEpisodes.map(episode => (
+              <div
+                key={episode.id}
+                className="bento-card bento-upload"
+                onClick={() => navigate('/player', { state: { videoUrl: episode.videoUrl, subtitleUrl: episode.subtitleUrl, title: episode.title } })}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="upload-icon-circle" style={{ overflow: 'hidden', padding: 0 }}>
+                  <img src={episode.thumbnail} alt={episode.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <h3 className="upload-title" style={{ fontSize: '0.9rem', marginTop: '10px' }}>{episode.title}</h3>
+                <p className="upload-desc">点击播放</p>
+              </div>
+            ))}
           </div>
         )}
       </div>

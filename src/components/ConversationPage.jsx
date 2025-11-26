@@ -730,6 +730,16 @@ export default function ConversationPage() {
   const [saveWordData, setSaveWordData] = useState({ word: '', definition: '', context: '' })
   const [isSaving, setIsSaving] = useState(false)
 
+<<<<<<< Updated upstream
+=======
+  // Recall Confirmation State
+  const [recallModalOpen, setRecallModalOpen] = useState(false)
+  const [msgIdToRecall, setMsgIdToRecall] = useState(null)
+
+  // Multimodal State
+  const [useMultimodal, setUseMultimodal] = useState(false)
+
+>>>>>>> Stashed changes
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
@@ -926,6 +936,7 @@ export default function ConversationPage() {
       console.error("Error accessing microphone:", err)
       showNotice("Could not access microphone", "error")
     }
+<<<<<<< Updated upstream
   }
 
   const stopRecording = () => {
@@ -938,6 +949,22 @@ export default function ConversationPage() {
       // Stop all tracks to release mic
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
     }
+=======
+    setInputText(targetMsg.text)
+
+    // Remove this message and all subsequent messages
+    // This effectively "rewinds" the conversation to before this message
+    setMessages(prev => prev.slice(0, msgIndex))
+
+    showNotice('已撤回，请重新编辑发送', 'success')
+    setRecallModalOpen(false)
+    setMsgIdToRecall(null)
+  }
+
+  const cancelRecall = () => {
+    setRecallModalOpen(false)
+    setMsgIdToRecall(null)
+>>>>>>> Stashed changes
   }
 
   const cancelRecording = () => {
@@ -1363,8 +1390,6 @@ export default function ConversationPage() {
           <div ref={messagesEndRef} />
         </ChatArea>
 
-
-
         <Controls>
           {suggestions.length > 0 && (
             <SuggestionContainer>
@@ -1376,6 +1401,7 @@ export default function ConversationPage() {
             </SuggestionContainer>
           )}
 
+<<<<<<< Updated upstream
           {isListening ? (
             <RecordingBar>
               <ActionButton variant="cancel" onClick={cancelRecording}>✕</ActionButton>
@@ -1425,6 +1451,33 @@ export default function ConversationPage() {
           ) : (
             <>
               <InputGroup>
+=======
+          <InputGroup>
+            {isListening ? (
+              <>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 12px' }}>
+                  <span style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: '600', marginRight: '12px', animation: 'pulse 1s infinite' }}>
+                    Recording {formatTime(recordingTime)}
+                  </span>
+                  <Waveform>
+                    {[0, 0.2, 0.4, 0.1, 0.3, 0.5, 0.2].map((d, i) => (
+                      <WaveBar key={i} delay={d} />
+                    ))}
+                  </Waveform>
+                </div>
+                <MicIconButton onClick={sendRecording} isListening={true} title="Finish & Send">
+                  {/* Stop Square Icon */}
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="none">
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                  </svg>
+                </MicIconButton>
+                <MicIconButton onClick={cancelRecording} title="Cancel">
+                  ✕
+                </MicIconButton>
+              </>
+            ) : (
+              <>
+>>>>>>> Stashed changes
                 <Input
                   type="text"
                   value={inputText}
@@ -1459,14 +1512,6 @@ export default function ConversationPage() {
           </SidebarHeader>
 
           <Section>
-            <OptionButton onClick={() => navigate('/history')}>
-              <OptionContent><Icon>📜</Icon> Chat History</OptionContent>
-              <Icon>→</Icon>
-            </OptionButton>
-          </Section>
-
-          <Section>
-            <SectionTitle>VIBE CHECK (THEME)</SectionTitle>
             <OptionGrid>
               <OptionButton
                 active={theme.id === 'tech'}
@@ -1526,8 +1571,8 @@ export default function ConversationPage() {
         </Sidebar>
 
         <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
-      </PageContainer >
-    </ThemeProvider >
+      </PageContainer>
+    </ThemeProvider>
   )
 }
 
