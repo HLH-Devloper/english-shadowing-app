@@ -880,30 +880,12 @@ export default function ConversationPage() {
     }
   }
 
-  const cancelRecording = () => {
-    stopRecording()
-    setInputText('')
-    audioChunksRef.current = []
-  }
-
-  const sendRecording = () => {
-    // We need to wait for the recorder to actually stop and produce the blob
-    // Since stopRecording() calls stop(), the 'stop' event on mediaRecorder will fire
-    // We can hook into that or just wait a tiny bit. 
-    // Better approach: wrap the stop logic in a promise or use the onstop handler.
-
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        const audioUrl = URL.createObjectURL(audioBlob)
-        handleSendMessage(inputText, audioUrl)
-      }
+  const handleRecall = (msgId) => {
+    // Friendly confirmation
+    if (!window.confirm('确定要撤回刚才的消息并重新编辑吗？\nAre you sure you want to recall and edit the last message?')) {
+      return
     }
 
-    stopRecording()
-  }
-
-  const handleRecall = (msgId) => {
     // Find the message index
     const msgIndex = messages.findIndex(m => m.id === msgId)
     if (msgIndex === -1) return
@@ -923,7 +905,31 @@ export default function ConversationPage() {
     // This effectively "rewinds" the conversation to before this message
     setMessages(prev => prev.slice(0, msgIndex))
 
-    showNotice('Message recalled. You can edit and send again.', 'info')
+    showNotice('已撤回，请重新编辑发送', 'success')
+  }
+
+  const cancelRecording = () => {
+    stopRecording()
+    setInputText('')
+    audioChunksRef.current = []
+  }
+
+  const sendRecording = () => {
+    // Capture current text to send
+    const textToSend = inputText
+
+    // Clear input immediately to prevent text flashing when switching back to input mode
+    setInputText('')
+
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const audioUrl = URL.createObjectURL(audioBlob)
+        handleSendMessage(textToSend, audioUrl)
+      }
+    }
+
+    stopRecording()
   }
 
   const speakText = (text, msgId, audioUrl) => {
