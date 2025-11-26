@@ -824,9 +824,7 @@ export default function ConversationPage() {
         if (fullText) {
           setInputText(fullText)
           // Keep focus on textarea for immediate Enter key sending
-          setTimeout(() => {
-            recordingTextareaRef.current?.focus()
-          }, 0)
+          // In immersive mode, we don't need to focus or show text, but we keep state updated
         }
       }
 
@@ -903,6 +901,29 @@ export default function ConversationPage() {
     }
 
     stopRecording()
+  }
+
+  const handleRecall = (msgId) => {
+    // Find the message index
+    const msgIndex = messages.findIndex(m => m.id === msgId)
+    if (msgIndex === -1) return
+
+    const targetMsg = messages[msgIndex]
+
+    // Stop any current speech
+    if (synthRef.current.speaking) {
+      synthRef.current.cancel()
+    }
+    setSpeakingMsgId(null)
+
+    // Set input text to the recalled message
+    setInputText(targetMsg.text)
+
+    // Remove this message and all subsequent messages
+    // This effectively "rewinds" the conversation to before this message
+    setMessages(prev => prev.slice(0, msgIndex))
+
+    showNotice('Message recalled. You can edit and send again.', 'info')
   }
 
   const speakText = (text, msgId, audioUrl) => {
@@ -1262,6 +1283,32 @@ export default function ConversationPage() {
 
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', alignItems: 'center', gap: '4px' }}>
+                  {/* Recall/Edit Button for User (Only for the latest user message) */}
+                  {msg.role === 'user' && index === messages.length - 1 && (
+                    <ActionBtn
+                      role={msg.role}
+                      onClick={() => handleRecall(msg.id)}
+                      title="Recall & Edit"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                      </svg>
+                    </ActionBtn>
+                  )}
+                  {msg.role === 'user' && index < messages.length - 1 && index === messages.length - 2 && messages[messages.length - 1].role === 'ai' && (
+                    <ActionBtn
+                      role={msg.role}
+                      onClick={() => handleRecall(msg.id)}
+                      title="Recall & Edit"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                      </svg>
+                    </ActionBtn>
+                  )}
+
                   {msg.role === 'ai' && (
                     <ActionBtn
                       onClick={() => handleTranslate(index, msg.text)}
@@ -1339,10 +1386,10 @@ export default function ConversationPage() {
                     ))}
                   </Waveform>
                 </div>
-                <MicIconButton onClick={sendRecording} isListening={true} title="Stop & Send">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                <MicIconButton onClick={sendRecording} isListening={true} title="Finish & Send">
+                  {/* Stop Square Icon */}
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="none">
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
                   </svg>
                 </MicIconButton>
                 <MicIconButton onClick={cancelRecording} title="Cancel">
