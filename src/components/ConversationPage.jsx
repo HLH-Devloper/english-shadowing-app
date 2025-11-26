@@ -888,6 +888,46 @@ export default function ConversationPage() {
     }
   }
 
+  const handleRecallRequest = (msgId) => {
+    setMsgIdToRecall(msgId)
+    setRecallModalOpen(true)
+  }
+
+  const confirmRecall = () => {
+    if (!msgIdToRecall) return
+
+    // Find the message index
+    const msgIndex = messages.findIndex(m => m.id === msgIdToRecall)
+    if (msgIndex === -1) {
+      setRecallModalOpen(false)
+      return
+    }
+
+    const targetMsg = messages[msgIndex]
+
+    // Stop any current speech
+    if (synthRef.current.speaking) {
+      synthRef.current.cancel()
+    }
+    setSpeakingMsgId(null)
+
+    // Set input text to the recalled message
+    setInputText(targetMsg.text)
+
+    // Remove this message and all subsequent messages
+    // This effectively "rewinds" the conversation to before this message
+    setMessages(prev => prev.slice(0, msgIndex))
+
+    showNotice('已撤回，请重新编辑发送', 'success')
+    setRecallModalOpen(false)
+    setMsgIdToRecall(null)
+  }
+
+  const cancelRecall = () => {
+    setRecallModalOpen(false)
+    setMsgIdToRecall(null)
+  }
+
   const cancelRecording = () => {
     stopRecording()
     setInputText('')
