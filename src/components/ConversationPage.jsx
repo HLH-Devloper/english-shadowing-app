@@ -730,16 +730,12 @@ export default function ConversationPage() {
   const [saveWordData, setSaveWordData] = useState({ word: '', definition: '', context: '' })
   const [isSaving, setIsSaving] = useState(false)
 
-<<<<<<< Updated upstream
-=======
   // Recall Confirmation State
   const [recallModalOpen, setRecallModalOpen] = useState(false)
   const [msgIdToRecall, setMsgIdToRecall] = useState(null)
 
   // Multimodal State
   const [useMultimodal, setUseMultimodal] = useState(false)
-
->>>>>>> Stashed changes
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
@@ -936,7 +932,6 @@ export default function ConversationPage() {
       console.error("Error accessing microphone:", err)
       showNotice("Could not access microphone", "error")
     }
-<<<<<<< Updated upstream
   }
 
   const stopRecording = () => {
@@ -949,7 +944,15 @@ export default function ConversationPage() {
       // Stop all tracks to release mic
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
     }
-=======
+  }
+
+  const confirmRecall = () => {
+    if (!msgIdToRecall) return
+
+    const msgIndex = messages.findIndex(m => m.id === msgIdToRecall)
+    if (msgIndex === -1) return
+
+    const targetMsg = messages[msgIndex]
     setInputText(targetMsg.text)
 
     // Remove this message and all subsequent messages
@@ -964,445 +967,445 @@ export default function ConversationPage() {
   const cancelRecall = () => {
     setRecallModalOpen(false)
     setMsgIdToRecall(null)
->>>>>>> Stashed changes
   }
+}
 
-  const cancelRecording = () => {
-    stopRecording()
-    setInputText('')
-    audioChunksRef.current = []
-  }
+const cancelRecording = () => {
+  stopRecording()
+  setInputText('')
+  audioChunksRef.current = []
+}
 
-  const sendRecording = () => {
-    // We need to wait for the recorder to actually stop and produce the blob
-    // Since stopRecording() calls stop(), the 'stop' event on mediaRecorder will fire
-    // We can hook into that or just wait a tiny bit. 
-    // Better approach: wrap the stop logic in a promise or use the onstop handler.
+const sendRecording = () => {
+  // We need to wait for the recorder to actually stop and produce the blob
+  // Since stopRecording() calls stop(), the 'stop' event on mediaRecorder will fire
+  // We can hook into that or just wait a tiny bit. 
+  // Better approach: wrap the stop logic in a promise or use the onstop handler.
 
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        const audioUrl = URL.createObjectURL(audioBlob)
-        handleSendMessage(inputText, audioUrl)
-      }
-    }
-
-    stopRecording()
-  }
-
-  const speakText = (text, msgId, audioUrl) => {
-    // If there is a recorded audio URL (user's voice), play that
-    if (audioUrl) {
-      const audio = new Audio(audioUrl)
-      audio.play()
-      return
-    }
-
-    // Otherwise use TTS (AI voice)
-    if (synthRef.current.speaking) {
-      synthRef.current.cancel()
-    }
-
-    const cleanText = text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '')
-
-    const utterance = new SpeechSynthesisUtterance(cleanText)
-    utterance.lang = 'en-US'
-    utterance.onstart = () => {
-      if (msgId) setSpeakingMsgId(msgId)
-    }
-    utterance.onend = () => {
-      if (msgId) setSpeakingMsgId(null)
-    }
-    utterance.onerror = (event) => {
-      console.error('SpeechSynthesisUtterance error:', event)
-      setSpeakingMsgId(null)
-    }
-
-    synthRef.current.speak(utterance)
-  }
-
-  // Auto-speak initial message for new sessions
-  useEffect(() => {
-    if (!sessionId) {
-      const initMsg = messages.find(m => m.id === 'init')
-      if (initMsg) {
-        // Small delay to ensure browser is ready
-        setTimeout(() => {
-          speakText(initMsg.text, initMsg.id)
-        }, 500)
-      }
-    }
-  }, [])
-
-  const handleTranslate = async (index, text) => {
-    // If already translated, return existing translation
-    if (messages[index].translation) return messages[index].translation
-
-    // If already translating, wait a bit and check again (simple debounce/wait)
-    if (translatingIndices.has(index)) {
-      return new Promise(resolve => {
-        const checkInterval = setInterval(() => {
-          if (messages[index].translation) {
-            clearInterval(checkInterval)
-            resolve(messages[index].translation)
-          }
-        }, 500)
-      })
-    }
-
-    setTranslatingIndices(prev => new Set(prev).add(index))
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { role: 'user', text: `Translate this English text to Chinese (Simplified). Output ONLY the translation. Text: "${text}"` }
-          ]
-        })
-      })
-
-      const responseText = await response.text()
-
-      if (!response.ok) {
-        throw new Error(`Server Error (${response.status}): ${responseText.slice(0, 100)}`)
-      }
-
-      let data
-      try {
-        data = JSON.parse(responseText)
-      } catch (e) {
-        throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
-      }
-
-      if (data.error) {
-        throw new Error(data.message || data.error)
-      }
-
-      if (data.reply) {
-        setMessages(prev => {
-          const newMsgs = [...prev]
-          newMsgs[index] = { ...newMsgs[index], translation: data.reply }
-          return newMsgs
-        })
-        return data.reply
-      }
-    } catch (error) {
-      console.error('Translation error:', error)
-      showNotice(`Translation failed: ${error.message}`, 'error')
-      return null
-    } finally {
-      setTranslatingIndices(prev => {
-        const next = new Set(prev)
-        next.delete(index)
-        return next
-      })
+  if (mediaRecorderRef.current) {
+    mediaRecorderRef.current.onstop = () => {
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+      const audioUrl = URL.createObjectURL(audioBlob)
+      handleSendMessage(inputText, audioUrl)
     }
   }
 
-  const handleSendMessage = async (text, audioUrl = null) => {
-    if (!text.trim()) return
+  stopRecording()
+}
 
-    const newMessages = [...messages, {
-      id: Date.now().toString(),
-      role: 'user',
-      text,
-      audioUrl // Store the audio URL if present
-    }]
-    setMessages(newMessages)
-    setInputText('')
-    setSuggestions([]) // Clear suggestions immediately
+const speakText = (text, msgId, audioUrl) => {
+  // If there is a recorded audio URL (user's voice), play that
+  if (audioUrl) {
+    const audio = new Audio(audioUrl)
+    audio.play()
+    return
+  }
 
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages,
-          scenario: scenario,
-          difficulty: difficulty
-        })
-      })
+  // Otherwise use TTS (AI voice)
+  if (synthRef.current.speaking) {
+    synthRef.current.cancel()
+  }
 
-      const responseText = await response.text()
+  const cleanText = text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '')
 
-      if (!response.ok) {
-        throw new Error(`Server Error (${response.status}): ${responseText.slice(0, 100)}`)
-      }
+  const utterance = new SpeechSynthesisUtterance(cleanText)
+  utterance.lang = 'en-US'
+  utterance.onstart = () => {
+    if (msgId) setSpeakingMsgId(msgId)
+  }
+  utterance.onend = () => {
+    if (msgId) setSpeakingMsgId(null)
+  }
+  utterance.onerror = (event) => {
+    console.error('SpeechSynthesisUtterance error:', event)
+    setSpeakingMsgId(null)
+  }
 
-      let data
-      try {
-        data = JSON.parse(responseText)
-      } catch (e) {
-        throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
-      }
+  synthRef.current.speak(utterance)
+}
 
-      if (data.error) {
-        console.error('API Soft Error:', data)
-        throw new Error(data.message || data.error)
-      }
+// Auto-speak initial message for new sessions
+useEffect(() => {
+  if (!sessionId) {
+    const initMsg = messages.find(m => m.id === 'init')
+    if (initMsg) {
+      // Small delay to ensure browser is ready
+      setTimeout(() => {
+        speakText(initMsg.text, initMsg.id)
+      }, 500)
+    }
+  }
+}, [])
 
-      const fullReply = data.reply || "Sorry, I couldn't understand that."
+const handleTranslate = async (index, text) => {
+  // If already translated, return existing translation
+  if (messages[index].translation) return messages[index].translation
 
-      // Parse Suggestions - handle various formats
-      let conversationContent = fullReply
-      const suggestionSplit = fullReply.split('###SUGGESTIONS###')
-      if (suggestionSplit.length > 1) {
-        conversationContent = suggestionSplit[0].trim()
-        try {
-          const parsedSuggestions = JSON.parse(suggestionSplit[1])
-          if (Array.isArray(parsedSuggestions)) {
-            setSuggestions(parsedSuggestions)
-          }
-        } catch (e) {
-          console.error('Failed to parse suggestions:', e)
+  // If already translating, wait a bit and check again (simple debounce/wait)
+  if (translatingIndices.has(index)) {
+    return new Promise(resolve => {
+      const checkInterval = setInterval(() => {
+        if (messages[index].translation) {
+          clearInterval(checkInterval)
+          resolve(messages[index].translation)
         }
-      } else {
-        // Handle incomplete suggestion markers (e.g., ###SUGGEST, ###SUG)
-        // Remove any trailing incomplete markers
-        conversationContent = conversationContent.replace(/###[A-Z]*$/i, '').trim()
+      }, 500)
+    })
+  }
+
+  setTranslatingIndices(prev => new Set(prev).add(index))
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'user', text: `Translate this English text to Chinese (Simplified). Output ONLY the translation. Text: "${text}"` }
+        ]
+      })
+    })
+
+    const responseText = await response.text()
+
+    if (!response.ok) {
+      throw new Error(`Server Error (${response.status}): ${responseText.slice(0, 100)}`)
+    }
+
+    let data
+    try {
+      data = JSON.parse(responseText)
+    } catch (e) {
+      throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
+    }
+
+    if (data.error) {
+      throw new Error(data.message || data.error)
+    }
+
+    if (data.reply) {
+      setMessages(prev => {
+        const newMsgs = [...prev]
+        newMsgs[index] = { ...newMsgs[index], translation: data.reply }
+        return newMsgs
+      })
+      return data.reply
+    }
+  } catch (error) {
+    console.error('Translation error:', error)
+    showNotice(`Translation failed: ${error.message}`, 'error')
+    return null
+  } finally {
+    setTranslatingIndices(prev => {
+      const next = new Set(prev)
+      next.delete(index)
+      return next
+    })
+  }
+}
+
+const handleSendMessage = async (text, audioUrl = null) => {
+  if (!text.trim()) return
+
+  const newMessages = [...messages, {
+    id: Date.now().toString(),
+    role: 'user',
+    text,
+    audioUrl // Store the audio URL if present
+  }]
+  setMessages(newMessages)
+  setInputText('')
+  setSuggestions([]) // Clear suggestions immediately
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: newMessages,
+        scenario: scenario,
+        difficulty: difficulty
+      })
+    })
+
+    const responseText = await response.text()
+
+    if (!response.ok) {
+      throw new Error(`Server Error (${response.status}): ${responseText.slice(0, 100)}`)
+    }
+
+    let data
+    try {
+      data = JSON.parse(responseText)
+    } catch (e) {
+      throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
+    }
+
+    if (data.error) {
+      console.error('API Soft Error:', data)
+      throw new Error(data.message || data.error)
+    }
+
+    const fullReply = data.reply || "Sorry, I couldn't understand that."
+
+    // Parse Suggestions - handle various formats
+    let conversationContent = fullReply
+    const suggestionSplit = fullReply.split('###SUGGESTIONS###')
+    if (suggestionSplit.length > 1) {
+      conversationContent = suggestionSplit[0].trim()
+      try {
+        const parsedSuggestions = JSON.parse(suggestionSplit[1])
+        if (Array.isArray(parsedSuggestions)) {
+          setSuggestions(parsedSuggestions)
+        }
+      } catch (e) {
+        console.error('Failed to parse suggestions:', e)
       }
+    } else {
+      // Handle incomplete suggestion markers (e.g., ###SUGGEST, ###SUG)
+      // Remove any trailing incomplete markers
+      conversationContent = conversationContent.replace(/###[A-Z]*$/i, '').trim()
+    }
 
-      const parts = conversationContent.split('|||')
-      let correction = null
-      let conversation = conversationContent
+    const parts = conversationContent.split('|||')
+    let correction = null
+    let conversation = conversationContent
 
-      if (parts.length > 1) {
-        correction = parts[0].trim()
-        conversation = parts[1].trim()
-      } else if (
-        conversationContent.includes('应该') ||
-        conversationContent.includes('错误') ||
-        conversationContent.includes('改为') ||
-        conversationContent.includes('正确') ||
-        conversationContent.includes('拼写') ||
-        conversationContent.match(/\d+\)/) // Matches numbered format like "1) 2)"
-      ) {
-        // If there's no ||| but content looks like correction
-        // This means AI forgot to add conversation part
-        correction = conversationContent
-        conversation = '' // No conversation provided
-      }
+    if (parts.length > 1) {
+      correction = parts[0].trim()
+      conversation = parts[1].trim()
+    } else if (
+      conversationContent.includes('应该') ||
+      conversationContent.includes('错误') ||
+      conversationContent.includes('改为') ||
+      conversationContent.includes('正确') ||
+      conversationContent.includes('拼写') ||
+      conversationContent.match(/\d+\)/) // Matches numbered format like "1) 2)"
+    ) {
+      // If there's no ||| but content looks like correction
+      // This means AI forgot to add conversation part
+      correction = conversationContent
+      conversation = '' // No conversation provided
+    }
 
-      const aiMsgId = Date.now().toString() + '-ai'
+    const aiMsgId = Date.now().toString() + '-ai'
 
-      setSpeakingMsgId(aiMsgId)
+    setSpeakingMsgId(aiMsgId)
 
-      // Only add message if there's actual conversation content
-      if (conversation) {
-        setMessages(prev => [...prev, {
-          id: aiMsgId,
-          role: 'ai',
-          text: conversation,
-          correction: correction
-        }])
-        speakText(conversation, aiMsgId)
-      } else if (correction) {
-        // If only correction exists, show a generic follow-up
-        const followUp = "Let's continue practicing. What would you like to talk about?"
-        setMessages(prev => [...prev, {
-          id: aiMsgId,
-          role: 'ai',
-          text: followUp,
-          correction: correction
-        }])
-        speakText(followUp, aiMsgId)
-      }
-    } catch (error) {
-      console.error('Chat error:', error)
-
-      // --- LEVEL 3: Local Fallback ---
-      const localFallbacks = [
-        "I see. Could you tell me more about that?",
-        "That's interesting! Please go on.",
-        "I understand. What else would you like to say?",
-        "Could you explain that in a bit more detail?",
-        "Great! Let's keep practicing. What's next?"
-      ]
-      const randomReply = localFallbacks[Math.floor(Math.random() * localFallbacks.length)]
-
-      const aiMsgId = Date.now().toString() + '-ai-fallback'
+    // Only add message if there's actual conversation content
+    if (conversation) {
       setMessages(prev => [...prev, {
         id: aiMsgId,
         role: 'ai',
-        text: randomReply
+        text: conversation,
+        correction: correction
       }])
-      speakText(randomReply, aiMsgId)
-
-      showNotice('网络连接不稳定，已切换至离线模式', 'warning')
+      speakText(conversation, aiMsgId)
+    } else if (correction) {
+      // If only correction exists, show a generic follow-up
+      const followUp = "Let's continue practicing. What would you like to talk about?"
+      setMessages(prev => [...prev, {
+        id: aiMsgId,
+        role: 'ai',
+        text: followUp,
+        correction: correction
+      }])
+      speakText(followUp, aiMsgId)
     }
+  } catch (error) {
+    console.error('Chat error:', error)
+
+    // --- LEVEL 3: Local Fallback ---
+    const localFallbacks = [
+      "I see. Could you tell me more about that?",
+      "That's interesting! Please go on.",
+      "I understand. What else would you like to say?",
+      "Could you explain that in a bit more detail?",
+      "Great! Let's keep practicing. What's next?"
+    ]
+    const randomReply = localFallbacks[Math.floor(Math.random() * localFallbacks.length)]
+
+    const aiMsgId = Date.now().toString() + '-ai-fallback'
+    setMessages(prev => [...prev, {
+      id: aiMsgId,
+      role: 'ai',
+      text: randomReply
+    }])
+    speakText(randomReply, aiMsgId)
+
+    showNotice('网络连接不稳定，已切换至离线模式', 'warning')
+  }
+}
+
+const handleDirectSave = async (msg, index) => {
+  const user = auth.currentUser
+  if (!user) {
+    showNotice('请先登录', 'error')
+    return
   }
 
-  const handleDirectSave = async (msg, index) => {
-    const user = auth.currentUser
-    if (!user) {
-      showNotice('请先登录', 'error')
-      return
+  setIsSaving(true)
+  try {
+    let translation = msg.translation
+
+    // If no translation exists, fetch it first
+    if (!translation) {
+      showNotice('正在获取翻译...', 'info')
+      translation = await handleTranslate(index, msg.text)
     }
 
-    setIsSaving(true)
-    try {
-      let translation = msg.translation
+    const result = await VocabularyService.addWord(user.uid, {
+      word: msg.text, // For sentences, the 'word' field stores the sentence
+      definition: translation || '暂无翻译',
+      type: 'sentence', // Mark as sentence
+      context: {
+        original: msg.text,
+        translation: translation || ''
+      },
+      source: 'AI Chat'
+    })
 
-      // If no translation exists, fetch it first
-      if (!translation) {
-        showNotice('正在获取翻译...', 'info')
-        translation = await handleTranslate(index, msg.text)
-      }
-
-      const result = await VocabularyService.addWord(user.uid, {
-        word: msg.text, // For sentences, the 'word' field stores the sentence
-        definition: translation || '暂无翻译',
-        type: 'sentence', // Mark as sentence
-        context: {
-          original: msg.text,
-          translation: translation || ''
-        },
-        source: 'AI Chat'
-      })
-
-      if (result.success) {
-        showNotice('已收藏到生词本 (句子)', 'success')
-      } else {
-        showNotice(result.message, 'info')
-      }
-    } catch (error) {
-      showNotice(error.message, 'error')
-    } finally {
-      setIsSaving(false)
+    if (result.success) {
+      showNotice('已收藏到生词本 (句子)', 'success')
+    } else {
+      showNotice(result.message, 'info')
     }
+  } catch (error) {
+    showNotice(error.message, 'error')
+  } finally {
+    setIsSaving(false)
   }
+}
 
-  const handleScenarioChange = (newScenario) => {
-    setScenario(newScenario)
-    showNotice(`Scenario changed to: ${newScenario}`, 'success')
-  }
+const handleScenarioChange = (newScenario) => {
+  setScenario(newScenario)
+  showNotice(`Scenario changed to: ${newScenario}`, 'success')
+}
 
-  const handleDifficultyChange = (newDifficulty) => {
-    setDifficulty(newDifficulty)
-    showNotice(`Difficulty set to: ${newDifficulty}`, 'success')
-  }
+const handleDifficultyChange = (newDifficulty) => {
+  setDifficulty(newDifficulty)
+  showNotice(`Difficulty set to: ${newDifficulty}`, 'success')
+}
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, '0')}: ${secs.toString().padStart(2, '0')}`
-  }
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins.toString().padStart(2, '0')}: ${secs.toString().padStart(2, '0')}`
+}
 
-  return (
-    <ThemeProvider theme={theme}>
-      <PageContainer>
-        {/* Member Check Overlay */}
-        {isMember === false && (
-          <MemberOverlay>
-            <MemberCard>
-              <MemberTitle>💎 会员专属功能</MemberTitle>
-              <MemberDesc>
-                AI 口语陪练是跟读鸭会员的专属权益。升级会员，即可解锁无限次 AI 对话练习，快速提升口语能力！
-              </MemberDesc>
-              <UpgradeButton onClick={() => navigate('/')}>返回首页</UpgradeButton>
-            </MemberCard>
-          </MemberOverlay>
-        )}
+return (
+  <ThemeProvider theme={theme}>
+    <PageContainer>
+      {/* Member Check Overlay */}
+      {isMember === false && (
+        <MemberOverlay>
+          <MemberCard>
+            <MemberTitle>💎 会员专属功能</MemberTitle>
+            <MemberDesc>
+              AI 口语陪练是跟读鸭会员的专属权益。升级会员，即可解锁无限次 AI 对话练习，快速提升口语能力！
+            </MemberDesc>
+            <UpgradeButton onClick={() => navigate('/')}>返回首页</UpgradeButton>
+          </MemberCard>
+        </MemberOverlay>
+      )}
 
-        <Header>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <IconButton onClick={() => navigate('/')}>
-              <span style={{ fontSize: '1.2rem' }}>⬅</span>
-            </IconButton>
-            <Title>AI Tutor</Title>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <ModeBadge>{scenario}</ModeBadge>
-            <IconButton onClick={() => setIsSettingsOpen(true)}>
-              <span style={{ fontSize: '1.2rem' }}>⚙️</span>
-            </IconButton>
-          </div>
-        </Header>
+      <Header>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <IconButton onClick={() => navigate('/')}>
+            <span style={{ fontSize: '1.2rem' }}>⬅</span>
+          </IconButton>
+          <Title>AI Tutor</Title>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <ModeBadge>{scenario}</ModeBadge>
+          <IconButton onClick={() => setIsSettingsOpen(true)}>
+            <span style={{ fontSize: '1.2rem' }}>⚙️</span>
+          </IconButton>
+        </div>
+      </Header>
 
-        <ChatArea ref={chatAreaRef}>
-          {messages.map((msg, index) => (
-            <BubbleWrapper key={msg.id} role={msg.role}>
-              <RoleLabel role={msg.role}>{msg.role === 'user' ? 'You' : 'AI Tutor'}</RoleLabel>
-              {msg.correction && (
-                <CorrectionBubble>
-                  <div style={{ fontWeight: 'bold', marginBottom: '4px', color: theme.accent }}>Correction:</div>
-                  {msg.correction}
-                </CorrectionBubble>
+      <ChatArea ref={chatAreaRef}>
+        {messages.map((msg, index) => (
+          <BubbleWrapper key={msg.id} role={msg.role}>
+            <RoleLabel role={msg.role}>{msg.role === 'user' ? 'You' : 'AI Tutor'}</RoleLabel>
+            {msg.correction && (
+              <CorrectionBubble>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px', color: theme.accent }}>Correction:</div>
+                {msg.correction}
+              </CorrectionBubble>
+            )}
+            <Bubble role={msg.role}>
+              {msg.role === 'ai' && speakingMsgId === msg.id && (
+                <BlurOverlay>
+                  <LoadingDots style={{ fontSize: '2rem', color: theme.accent }} />
+                </BlurOverlay>
               )}
-              <Bubble role={msg.role}>
-                {msg.role === 'ai' && speakingMsgId === msg.id && (
-                  <BlurOverlay>
-                    <LoadingDots style={{ fontSize: '2rem', color: theme.accent }} />
-                  </BlurOverlay>
-                )}
-                {msg.text}
+              {msg.text}
 
-                {/* Action Buttons */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', alignItems: 'center', gap: '4px' }}>
-                  {msg.role === 'ai' && (
-                    <ActionBtn
-                      onClick={() => handleTranslate(index, msg.text)}
-                      active={translatingIndices.has(index) || msg.translation}
-                      title="Translate"
-                    >
-                      <svg viewBox="0 0 24 24">
-                        <path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" /><path d="m22 22-5-10-5 10" /><path d="M14 18h6" />
-                      </svg>
-                    </ActionBtn>
-                  )}
-
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', alignItems: 'center', gap: '4px' }}>
+                {msg.role === 'ai' && (
                   <ActionBtn
-                    role={msg.role}
-                    onClick={() => speakText(msg.text, msg.id)}
-                    title="Play Audio"
+                    onClick={() => handleTranslate(index, msg.text)}
+                    active={translatingIndices.has(index) || msg.translation}
+                    title="Translate"
                   >
                     <svg viewBox="0 0 24 24">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                      <path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" /><path d="m22 22-5-10-5 10" /><path d="M14 18h6" />
                     </svg>
                   </ActionBtn>
-
-                  <ActionBtn
-                    role={msg.role}
-                    onClick={() => handleDirectSave(msg, index)}
-                    title="Save to Vocabulary"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                  </ActionBtn>
-                </div>
-
-                {(msg.translation || translatingIndices.has(index)) && (
-                  <>
-                    <TranslationDivider />
-                    <TranslationText>
-                      {msg.translation || 'Translating...'}
-                    </TranslationText>
-                  </>
                 )}
-              </Bubble>
-            </BubbleWrapper>
-          ))}
-          <div ref={messagesEndRef} />
-        </ChatArea>
 
-        <Controls>
-          {suggestions.length > 0 && (
-            <SuggestionContainer>
-              {suggestions.map((sugg, i) => (
-                <SuggestionChip key={i} onClick={() => setInputText(sugg)}>
-                  {sugg}
-                </SuggestionChip>
-              ))}
-            </SuggestionContainer>
-          )}
+                <ActionBtn
+                  role={msg.role}
+                  onClick={() => speakText(msg.text, msg.id)}
+                  title="Play Audio"
+                >
+                  <svg viewBox="0 0 24 24">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                  </svg>
+                </ActionBtn>
 
-<<<<<<< Updated upstream
-          {isListening ? (
+                <ActionBtn
+                  role={msg.role}
+                  onClick={() => handleDirectSave(msg, index)}
+                  title="Save to Vocabulary"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </ActionBtn>
+              </div>
+
+              {(msg.translation || translatingIndices.has(index)) && (
+                <>
+                  <TranslationDivider />
+                  <TranslationText>
+                    {msg.translation || 'Translating...'}
+                  </TranslationText>
+                </>
+              )}
+            </Bubble>
+          </BubbleWrapper>
+        ))}
+        <div ref={messagesEndRef} />
+      </ChatArea>
+
+      <Controls>
+        {suggestions.length > 0 && (
+          <SuggestionContainer>
+            {suggestions.map((sugg, i) => (
+              <SuggestionChip key={i} onClick={() => setInputText(sugg)}>
+                {sugg}
+              </SuggestionChip>
+            ))}
+          </SuggestionContainer>
+        )}
+
+        {
+          isListening ? (
             <RecordingBar>
               <ActionButton variant="cancel" onClick={cancelRecording}>✕</ActionButton>
               <Waveform>
@@ -1451,33 +1454,6 @@ export default function ConversationPage() {
           ) : (
             <>
               <InputGroup>
-=======
-          <InputGroup>
-            {isListening ? (
-              <>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 12px' }}>
-                  <span style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: '600', marginRight: '12px', animation: 'pulse 1s infinite' }}>
-                    Recording {formatTime(recordingTime)}
-                  </span>
-                  <Waveform>
-                    {[0, 0.2, 0.4, 0.1, 0.3, 0.5, 0.2].map((d, i) => (
-                      <WaveBar key={i} delay={d} />
-                    ))}
-                  </Waveform>
-                </div>
-                <MicIconButton onClick={sendRecording} isListening={true} title="Finish & Send">
-                  {/* Stop Square Icon */}
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="none">
-                    <rect x="6" y="6" width="12" height="12" rx="2" />
-                  </svg>
-                </MicIconButton>
-                <MicIconButton onClick={cancelRecording} title="Cancel">
-                  ✕
-                </MicIconButton>
-              </>
-            ) : (
-              <>
->>>>>>> Stashed changes
                 <Input
                   type="text"
                   value={inputText}
@@ -1501,78 +1477,78 @@ export default function ConversationPage() {
               </MicContainer>
             </>
           )}
-        </Controls>
+      </Controls>
 
-        {/* Settings Sidebar */}
-        <SidebarOverlay isOpen={isSettingsOpen} onClick={() => setIsSettingsOpen(false)} />
-        <Sidebar isOpen={isSettingsOpen}>
-          <SidebarHeader>
-            <SidebarTitle>Settings</SidebarTitle>
-            <IconButton onClick={() => setIsSettingsOpen(false)}>✕</IconButton>
-          </SidebarHeader>
+      {/* Settings Sidebar */}
+      <SidebarOverlay isOpen={isSettingsOpen} onClick={() => setIsSettingsOpen(false)} />
+      <Sidebar isOpen={isSettingsOpen}>
+        <SidebarHeader>
+          <SidebarTitle>Settings</SidebarTitle>
+          <IconButton onClick={() => setIsSettingsOpen(false)}>✕</IconButton>
+        </SidebarHeader>
 
-          <Section>
-            <OptionGrid>
+        <Section>
+          <OptionGrid>
+            <OptionButton
+              active={theme.id === 'tech'}
+              onClick={() => setTheme(techTheme)}
+            >
+              <OptionContent><Icon>✨</Icon> Tech (Dark)</OptionContent>
+              {theme.id === 'tech' && <Checkmark>✓</Checkmark>}
+            </OptionButton>
+            <OptionButton
+              active={theme.id === 'aura'}
+              onClick={() => setTheme(auraTheme)}
+            >
+              <OptionContent><Icon>☁️</Icon> Aura (Light)</OptionContent>
+              {theme.id === 'aura' && <Checkmark>✓</Checkmark>}
+            </OptionButton>
+            <OptionButton
+              active={theme.id === 'pop'}
+              onClick={() => setTheme(popTheme)}
+            >
+              <OptionContent><Icon>🍭</Icon> Pop (Dopamine)</OptionContent>
+              {theme.id === 'pop' && <Checkmark>✓</Checkmark>}
+            </OptionButton>
+          </OptionGrid>
+        </Section>
+
+        <Section>
+          <SectionTitle>DIFFICULTY</SectionTitle>
+          <OptionGrid>
+            {DIFFICULTIES.map(diff => (
               <OptionButton
-                active={theme.id === 'tech'}
-                onClick={() => setTheme(techTheme)}
+                key={diff.id}
+                active={difficulty === diff.id}
+                onClick={() => handleDifficultyChange(diff.id)}
               >
-                <OptionContent><Icon>✨</Icon> Tech (Dark)</OptionContent>
-                {theme.id === 'tech' && <Checkmark>✓</Checkmark>}
+                <OptionContent>{diff.label}</OptionContent>
+                {difficulty === diff.id && <Checkmark>✓</Checkmark>}
               </OptionButton>
+            ))}
+          </OptionGrid>
+        </Section>
+
+        <Section>
+          <SectionTitle>SCENARIO</SectionTitle>
+          <OptionGrid style={{ maxHeight: '300px', overflowY: 'auto' }}>
+            {SCENARIOS.map(scen => (
               <OptionButton
-                active={theme.id === 'aura'}
-                onClick={() => setTheme(auraTheme)}
+                key={scen.id}
+                active={scenario === scen.id}
+                onClick={() => handleScenarioChange(scen.id)}
               >
-                <OptionContent><Icon>☁️</Icon> Aura (Light)</OptionContent>
-                {theme.id === 'aura' && <Checkmark>✓</Checkmark>}
+                <OptionContent><Icon>{scen.icon}</Icon> {scen.label}</OptionContent>
+                {scenario === scen.id && <Checkmark>✓</Checkmark>}
               </OptionButton>
-              <OptionButton
-                active={theme.id === 'pop'}
-                onClick={() => setTheme(popTheme)}
-              >
-                <OptionContent><Icon>🍭</Icon> Pop (Dopamine)</OptionContent>
-                {theme.id === 'pop' && <Checkmark>✓</Checkmark>}
-              </OptionButton>
-            </OptionGrid>
-          </Section>
+            ))}
+          </OptionGrid>
+        </Section>
+      </Sidebar>
 
-          <Section>
-            <SectionTitle>DIFFICULTY</SectionTitle>
-            <OptionGrid>
-              {DIFFICULTIES.map(diff => (
-                <OptionButton
-                  key={diff.id}
-                  active={difficulty === diff.id}
-                  onClick={() => handleDifficultyChange(diff.id)}
-                >
-                  <OptionContent>{diff.label}</OptionContent>
-                  {difficulty === diff.id && <Checkmark>✓</Checkmark>}
-                </OptionButton>
-              ))}
-            </OptionGrid>
-          </Section>
-
-          <Section>
-            <SectionTitle>SCENARIO</SectionTitle>
-            <OptionGrid style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              {SCENARIOS.map(scen => (
-                <OptionButton
-                  key={scen.id}
-                  active={scenario === scen.id}
-                  onClick={() => handleScenarioChange(scen.id)}
-                >
-                  <OptionContent><Icon>{scen.icon}</Icon> {scen.label}</OptionContent>
-                  {scenario === scen.id && <Checkmark>✓</Checkmark>}
-                </OptionButton>
-              ))}
-            </OptionGrid>
-          </Section>
-        </Sidebar>
-
-        <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
-      </PageContainer>
-    </ThemeProvider>
-  )
-}
+      <Toast message={toastMsg} type={toastType} onClose={dismissNotice} />
+    </PageContainer >
+  </ThemeProvider >
+)
+  }
 
