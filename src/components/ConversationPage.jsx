@@ -672,6 +672,10 @@ export default function ConversationPage() {
   const [saveWordData, setSaveWordData] = useState({ word: '', definition: '', context: '' })
   const [isSaving, setIsSaving] = useState(false)
 
+  // Recall Confirmation State
+  const [recallModalOpen, setRecallModalOpen] = useState(false)
+  const [msgIdToRecall, setMsgIdToRecall] = useState(null)
+
   const recognitionRef = useRef(null)
   const synthRef = useRef(window.speechSynthesis)
   const messagesEndRef = useRef(null)
@@ -683,6 +687,7 @@ export default function ConversationPage() {
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const finalTranscriptRef = useRef('') // Track accumulated final transcript
+  const isSendingRef = useRef(false) // Flag to prevent late speech results from populating input
 
   const showNotice = (msg, type = 'info') => { setToastMsg(msg); setToastType(type) }
   const dismissNotice = () => setToastMsg('')
@@ -821,7 +826,9 @@ export default function ConversationPage() {
 
         // Display accumulated final + current interim
         const fullText = finalTranscriptRef.current + (interimTranscript ? ' ' + interimTranscript : '')
-        if (fullText) {
+
+        // Only update input if we are NOT in the process of sending
+        if (fullText && !isSendingRef.current) {
           setInputText(fullText)
           // Keep focus on textarea for immediate Enter key sending
           // In immersive mode, we don't need to focus or show text, but we keep state updated
@@ -848,6 +855,7 @@ export default function ConversationPage() {
     setInputText('')
     finalTranscriptRef.current = '' // Reset accumulated transcript
     audioChunksRef.current = []
+    isSendingRef.current = false // Reset sending flag
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -880,46 +888,16 @@ export default function ConversationPage() {
     }
   }
 
-  const handleRecall = (msgId) => {
-    // Friendly confirmation
-    if (!window.confirm('确定要撤回刚才的消息并重新编辑吗？\nAre you sure you want to recall and edit the last message?')) {
-      return
-    }
-
-    // Find the message index
-    const msgIndex = messages.findIndex(m => m.id === msgId)
-    if (msgIndex === -1) return
-
-    const targetMsg = messages[msgIndex]
-
-    // Stop any current speech
-    if (synthRef.current.speaking) {
-      synthRef.current.cancel()
-    }
-    setSpeakingMsgId(null)
-
-    // Set input text to the recalled message
-    setInputText(targetMsg.text)
-
-    // Remove this message and all subsequent messages
-    // This effectively "rewinds" the conversation to before this message
-    setMessages(prev => prev.slice(0, msgIndex))
-
-    showNotice('已撤回，请重新编辑发送', 'success')
-  }
-
-  const cancelRecording = () => {
-    stopRecording()
-    setInputText('')
-    audioChunksRef.current = []
-  }
-
   const sendRecording = () => {
+    // Set sending flag to true to block any late speech results
+    isSendingRef.current = true
+
     // Capture current text to send
     const textToSend = inputText
 
     // Clear input immediately to prevent text flashing when switching back to input mode
     setInputText('')
+    finalTranscriptRef.current = '' // Clear transcript buffer
 
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.onstop = () => {
@@ -1250,6 +1228,32 @@ export default function ConversationPage() {
                 AI 口语陪练是跟读鸭会员的专属权益。升级会员，即可解锁无限次 AI 对话练习，快速提升口语能力！
               </MemberDesc>
               <UpgradeButton onClick={() => navigate('/')}>返回首页</UpgradeButton>
+            </MemberCard>
+          </MemberOverlay>
+        )}
+
+        {/* Recall Confirmation Overlay */}
+        {recallModalOpen && (
+          <MemberOverlay style={{ zIndex: 300 }}>
+            <MemberCard style={{ maxWidth: '320px', padding: '30px' }}>
+              <MemberTitle style={{ fontSize: '1.4rem', marginBottom: '10px' }}>确认撤回？</MemberTitle>
+              <MemberDesc style={{ fontSize: '0.95rem', marginBottom: '24px' }}>
+                撤回后，您刚才的消息将回到输入框，您可以修改后重新发送。AI 的回复也将被移除。
+              </MemberDesc>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <UpgradeButton
+                  onClick={cancelRecall}
+                  style={{ background: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '1rem', padding: '12px 24px' }}
+                >
+                  取消
+                </UpgradeButton>
+                <UpgradeButton
+                  onClick={confirmRecall}
+                  style={{ background: '#ef4444', color: 'white', fontSize: '1rem', padding: '12px 24px' }}
+                >
+                  确定撤回
+                </UpgradeButton>
+              </div>
             </MemberCard>
           </MemberOverlay>
         )}
