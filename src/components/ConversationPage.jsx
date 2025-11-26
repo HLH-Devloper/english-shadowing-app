@@ -1303,7 +1303,7 @@ export default function ConversationPage() {
                   {msg.role === 'user' && index === messages.length - 1 && (
                     <ActionBtn
                       role={msg.role}
-                      onClick={() => handleRecall(msg.id)}
+                      onClick={() => handleRecallRequest(msg.id)}
                       title="Recall & Edit"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1315,7 +1315,7 @@ export default function ConversationPage() {
                   {msg.role === 'user' && index < messages.length - 1 && index === messages.length - 2 && messages[messages.length - 1].role === 'ai' && (
                     <ActionBtn
                       role={msg.role}
-                      onClick={() => handleRecall(msg.id)}
+                      onClick={() => handleRecallRequest(msg.id)}
                       title="Recall & Edit"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
