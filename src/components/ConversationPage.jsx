@@ -371,19 +371,30 @@ const SendButton = styled.button`
   &:active { transform: scale(0.98); }
 `
 
-// --- Recording Bar Components ---
-
-const RecordingBar = styled.div`
+const MicIconButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  color: ${props => props.isListening ? props.theme.micActive : props.theme.textSecondary};
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: ${props => props.theme.id === 'tech' ? '#1e293b' : '#ffffff'};
-  padding: 16px 24px;
-  border-radius: 24px;
-  box-shadow: ${props => props.theme.id === 'pop' ? '4px 4px 0px #000' : '0 10px 30px rgba(0,0,0,0.1)'};
-  border: ${props => props.theme.border};
-  animation: ${fadeIn} 0.3s ease;
+  justify-content: center;
+  margin-right: 4px;
+
+  &:hover { 
+    background: rgba(0,0,0,0.05); 
+    transform: scale(1.1);
+    color: ${props => props.theme.accent};
+  }
 `
+
+// --- Recording Bar Components ---
+
+
 
 const Waveform = styled.div`
   display: flex;
@@ -404,76 +415,7 @@ const WaveBar = styled.div`
   border: ${props => props.theme.id === 'pop' ? '1px solid #000' : 'none'};
 `
 
-const Timer = styled.span`
-  font-family: monospace;
-  font-size: 1rem;
-  color: ${props => props.theme.text};
-  margin-right: 16px;
-`
 
-const ActionButton = styled.button`
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 1.2rem;
-  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : 'none'};
-  
-  ${props => props.variant === 'cancel' ? css`
-    background: rgba(0,0,0,0.05);
-    color: ${props.theme.textSecondary};
-    &:hover { background: rgba(0,0,0,0.1); }
-  ` : css`
-    background: #22c55e; /* Green for send */
-    color: white;
-    box-shadow: ${props.theme.id === 'pop' ? '2px 2px 0px #000' : '0 4px 12px rgba(34, 197, 94, 0.3)'};
-    &:hover { transform: scale(1.05); }
-  `}
-`
-
-const MicButton = styled.button`
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border: none;
-  background: ${props => props.theme.micInactive};
-  color: white;
-  font-size: 28px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: ${props => props.theme.shadow};
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: ${props => props.theme.id === 'pop' ? '2px solid #000' : 'none'};
-  
-  &:hover {
-    transform: translateY(-2px) scale(1.05);
-  }
-  &:active {
-    transform: translateY(0) scale(0.95);
-  }
-`
-
-const MicContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-`
-
-const StatusText = styled.span`
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: ${props => props.isListening ? props.theme.micActive : props.theme.textSecondary};
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-`
 
 const SuggestionContainer = styled.div`
   display: flex;
@@ -1376,55 +1318,41 @@ export default function ConversationPage() {
             </SuggestionContainer>
           )}
 
-          {isListening ? (
-            <RecordingBar>
-              <ActionButton variant="cancel" onClick={cancelRecording}>✕</ActionButton>
-              <Waveform>
-                {[0, 0.2, 0.4, 0.1, 0.3, 0.5, 0.2].map((d, i) => (
-                  <WaveBar key={i} delay={d} />
-                ))}
-              </Waveform>
-              <textarea
-                ref={recordingTextareaRef}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    if (inputText.trim()) {
-                      sendRecording()
-                    }
-                  }
-                }}
-                placeholder="Listening..."
-                rows={1}
-                style={{
-                  flex: 1,
-                  margin: '0 12px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'inherit',
-                  fontSize: '1rem',
-                  outline: 'none',
-                  resize: 'none',
-                  overflow: 'hidden',
-                  minHeight: '24px',
-                  maxHeight: '200px',
-                  overflowY: 'auto'
-                }}
-                onInput={(e) => {
-                  e.target.style.height = 'auto'
-                  e.target.style.height = e.target.scrollHeight + 'px'
-                  // Auto-scroll to bottom to show latest content
-                  e.target.scrollTop = e.target.scrollHeight
-                }}
-              />
-              <Timer>{formatTime(recordingTime)}</Timer>
-              <ActionButton onClick={sendRecording}>➜</ActionButton>
-            </RecordingBar>
-          ) : (
-            <>
-              <InputGroup>
+          {suggestions.length > 0 && (
+            <SuggestionContainer>
+              {suggestions.map((sugg, i) => (
+                <SuggestionChip key={i} onClick={() => setInputText(sugg)}>
+                  {sugg}
+                </SuggestionChip>
+              ))}
+            </SuggestionContainer>
+          )}
+
+          <InputGroup>
+            {isListening ? (
+              <>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 12px' }}>
+                  <span style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: '600', marginRight: '12px', animation: 'pulse 1s infinite' }}>
+                    Recording {formatTime(recordingTime)}
+                  </span>
+                  <Waveform>
+                    {[0, 0.2, 0.4, 0.1, 0.3, 0.5, 0.2].map((d, i) => (
+                      <WaveBar key={i} delay={d} />
+                    ))}
+                  </Waveform>
+                </div>
+                <MicIconButton onClick={sendRecording} isListening={true} title="Stop & Send">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </MicIconButton>
+                <MicIconButton onClick={cancelRecording} title="Cancel">
+                  ✕
+                </MicIconButton>
+              </>
+            ) : (
+              <>
                 <Input
                   type="text"
                   value={inputText}
@@ -1432,22 +1360,20 @@ export default function ConversationPage() {
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
                   placeholder="Type a message..."
                 />
+                <MicIconButton onClick={startRecording} title="Voice Input">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                  </svg>
+                </MicIconButton>
                 <SendButton onClick={() => handleSendMessage(inputText)}>
                   Send
                 </SendButton>
-              </InputGroup>
-
-              <MicContainer>
-                <MicButton
-                  onClick={startRecording}
-                  aria-label="Start listening"
-                >
-                  🎤
-                </MicButton>
-                <StatusText isListening={isListening}>Tap to Speak</StatusText>
-              </MicContainer>
-            </>
-          )}
+              </>
+            )}
+          </InputGroup>
         </Controls>
 
         {/* Settings Sidebar */}
