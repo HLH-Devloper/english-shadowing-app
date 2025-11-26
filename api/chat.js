@@ -115,6 +115,9 @@ EXAMPLES:
 User: "I go to park yesterday."
 Output: "go" 应该是 "went"，因为是过去时。|||That sounds nice! Did you go alone or with friends?###SUGGESTIONS###["I went alone.", "I went with my family.", "I met some friends there."]
 
+User: "I want to talk food"
+Output: "talk food" 应该是 "talk about food"（缺少介词）。|||That's a great topic! What kind of food are you interested in?###SUGGESTIONS###["I like Chinese food.", "I love pizza.", "I enjoy cooking."]
+
 User: "I go out for lunch with a friends."
 Output: 1) "go out" 应该是 "went out"（过去时）。2) "a friends" 应该是 "a friend"（单数）或 "friends"（复数，不加a）。|||That sounds lovely! Where did you go for lunch?###SUGGESTIONS###["We went to a new café.", "I tried Italian food.", "Just grabbed a quick bite."]
 
@@ -151,6 +154,9 @@ CRITICAL REQUIREMENT FOR FORMAT COMPLIANCE:
 - Example: "错误纠正。|||That's interesting! Tell me more about it.###SUGGESTIONS###[...]"
 
 CRITICAL REQUIREMENT FOR ERROR DETECTION:
+- DO NOT be polite about errors. Point them out directly.
+- Even if you understand the user, if the grammar is wrong, you MUST correct it.
+- Missing prepositions (e.g., "talk food" -> "talk about food") MUST be corrected.
 - ALWAYS check EVERY word for spelling errors
 - ALWAYS check grammar for EVERY sentence
 - If you find even ONE error, you MUST correct it
@@ -274,7 +280,10 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
 
                         const chat = model.startChat({
                             history: history,
-                            generationConfig: { maxOutputTokens: 500 },
+                            generationConfig: {
+                                maxOutputTokens: 500,
+                                temperature: 0.3, // Lower temperature for stricter adherence to rules
+                            },
                         });
 
                         const result = await chat.sendMessage(lastMessageText);
