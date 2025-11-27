@@ -10,6 +10,7 @@ import RedeemPage from './components/RedeemPage'
 import ConversationPage from './components/ConversationPage'
 import HistoryPage from './components/HistoryPage'
 import VocabularyPage from './components/VocabularyPage'
+import AdminPage from './components/AdminPage'
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/conversation" element={<ConversationPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/vocabulary" element={<VocabularyPage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </div>
     </Router>
