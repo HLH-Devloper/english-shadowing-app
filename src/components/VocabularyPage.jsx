@@ -12,7 +12,8 @@ export default function VocabularyPage() {
     const [words, setWords] = useState([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('list') // list | flashcard
-    const [filterType, setFilterType] = useState('all') // all | word | sentence
+    const [filterType, setFilterType] = useState('all') // all | word | sentence | starred
+    const [filterLevel, setFilterLevel] = useState('all') // all | 0 | 1 | 2 | 3 | 4 | 5
     const [viewMode, setViewMode] = useState('card') // card | compact
     const [visibleCount, setVisibleCount] = useState(20)
     const [showRules, setShowRules] = useState(false)
@@ -163,11 +164,36 @@ export default function VocabularyPage() {
     }
 
     const allFilteredWords = words.filter(w => {
-        if (filterType === 'all') return true
-        if (filterType === 'starred') return w.isStarred === true
-        const type = w.type || 'word'
-        return type === filterType
+        // 1. Filter by Type/Starred
+        let typeMatch = true
+        if (filterType === 'starred') {
+            typeMatch = w.isStarred === true
+        } else if (filterType !== 'all') {
+            const type = w.type || 'word'
+            typeMatch = type === filterType
+        }
+
+        // 2. Filter by Level
+        let levelMatch = true
+        if (filterLevel !== 'all') {
+            const level = w.masteryLevel || 0
+            levelMatch = level === parseInt(filterLevel)
+        }
+
+        return typeMatch && levelMatch
     })
+
+    const renderLevelStars = (level = 0) => {
+        const stars = []
+        for (let i = 0; i < 5; i++) {
+            stars.push(
+                <span key={i} style={{ color: i < level ? '#10b981' : '#334155', fontSize: '12px' }}>
+                    ★
+                </span>
+            )
+        }
+        return <div style={{ display: 'flex', gap: '1px' }} title={`熟练度 Lv.${level}`}>{stars}</div>
+    }
 
     const displayedWords = allFilteredWords.slice(0, visibleCount)
     const hasMore = displayedWords.length < allFilteredWords.length
@@ -270,38 +296,63 @@ export default function VocabularyPage() {
                                                 cursor: 'pointer',
                                                 transition: 'all 0.2s'
                                             }}
-                                        >⭐ 标星</button>
+                                        >⭐ 收藏</button>
                                     </div>
 
-                                    {/* View Mode Toggle */}
-                                    <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '8px', padding: '2px', border: '1px solid #334155' }}>
-                                        <button
-                                            onClick={() => setViewMode('card')}
-                                            title="卡片视图"
+                                    {/* Level Filter */}
+                                    <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginLeft: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+                                        <span style={{ color: '#94a3b8', fontSize: '12px', whiteSpace: 'nowrap' }}>等级:</span>
+                                        <select
+                                            value={filterLevel}
+                                            onChange={(e) => setFilterLevel(e.target.value)}
                                             style={{
-                                                background: viewMode === 'card' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                                border: 'none',
-                                                borderRadius: '6px',
+                                                background: 'rgba(30, 41, 59, 0.5)',
+                                                border: '1px solid #334155',
+                                                color: '#fff',
+                                                borderRadius: '4px',
                                                 padding: '4px 8px',
-                                                cursor: 'pointer',
-                                                fontSize: '16px',
-                                                color: viewMode === 'card' ? '#fff' : '#64748b'
+                                                fontSize: '12px'
                                             }}
-                                        >🗂️</button>
-                                        <button
-                                            onClick={() => setViewMode('compact')}
-                                            title="紧凑视图"
-                                            style={{
-                                                background: viewMode === 'compact' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                padding: '4px 8px',
-                                                cursor: 'pointer',
-                                                fontSize: '16px',
-                                                color: viewMode === 'compact' ? '#fff' : '#64748b'
-                                            }}
-                                        >☰</button>
+                                        >
+                                            <option value="all">全部等级</option>
+                                            <option value="0">Lv.0 陌生</option>
+                                            <option value="1">Lv.1 认识</option>
+                                            <option value="2">Lv.2 熟悉</option>
+                                            <option value="3">Lv.3 掌握</option>
+                                            <option value="4">Lv.4 牢记</option>
+                                            <option value="5">Lv.5 永久</option>
+                                        </select>
                                     </div>
+                                </div>
+
+                                {/* View Mode Toggle */}
+                                <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '8px', padding: '2px', border: '1px solid #334155', marginBottom: '20px' }}>
+                                    <button
+                                        onClick={() => setViewMode('card')}
+                                        title="卡片视图"
+                                        style={{
+                                            background: viewMode === 'card' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '4px 8px',
+                                            cursor: 'pointer',
+                                            fontSize: '16px',
+                                            color: viewMode === 'card' ? '#fff' : '#64748b'
+                                        }}
+                                    >🗂️</button>
+                                    <button
+                                        onClick={() => setViewMode('compact')}
+                                        title="紧凑视图"
+                                        style={{
+                                            background: viewMode === 'compact' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '4px 8px',
+                                            cursor: 'pointer',
+                                            fontSize: '16px',
+                                            color: viewMode === 'compact' ? '#fff' : '#64748b'
+                                        }}
+                                    >☰</button>
                                 </div>
 
                                 {displayedWords.length === 0 ? (
@@ -331,6 +382,7 @@ export default function VocabularyPage() {
                                                                 }}>
                                                                     {word.type === 'sentence' ? '句子' : '单词'}
                                                                 </span>
+                                                                {renderLevelStars(word.masteryLevel)}
                                                                 <span style={{ color: '#94a3b8', fontSize: '14px' }}>{word.phonetic}</span>
                                                                 <button
                                                                     onClick={(e) => speakWord(word.word, e)}
@@ -349,7 +401,7 @@ export default function VocabularyPage() {
                                                                 color: word.isStarred ? '#f59e0b' : '#475569',
                                                                 marginRight: '10px'
                                                             }}
-                                                            title={word.isStarred ? "取消标星" : "标星"}
+                                                            title={word.isStarred ? "取消收藏" : "收藏"}
                                                         >
                                                             {word.isStarred ? '★' : '☆'}
                                                         </button>
@@ -392,6 +444,7 @@ export default function VocabularyPage() {
                                                 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
                                                         <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '16px', whiteSpace: 'nowrap' }}>{word.word}</div>
+                                                        {renderLevelStars(word.masteryLevel)}
                                                         <div style={{ color: '#94a3b8', fontSize: '12px', whiteSpace: 'nowrap' }}>{word.phonetic}</div>
                                                         <div style={{ color: '#cbd5e1', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
                                                             {word.definition}
@@ -411,7 +464,7 @@ export default function VocabularyPage() {
                                                                 fontSize: '18px',
                                                                 color: word.isStarred ? '#f59e0b' : '#475569'
                                                             }}
-                                                            title={word.isStarred ? "取消标星" : "标星"}
+                                                            title={word.isStarred ? "取消收藏" : "收藏"}
                                                         >
                                                             {word.isStarred ? '★' : '☆'}
                                                         </button>
