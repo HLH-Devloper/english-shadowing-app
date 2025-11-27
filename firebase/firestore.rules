@@ -5,6 +5,7 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
     // 管理员 UID 已配置；如需新增管理员，请将 UID 添加到下方数组
+    // 更新：同时也检查用户文档中的 role 字段
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid in [
@@ -16,6 +17,7 @@ service cloud.firestore {
 
     // 用户文档：仅本人可读写
     match /users/{uid} {
+      // 允许管理员读取所有用户列表
       allow read: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid);
 
@@ -59,6 +61,15 @@ service cloud.firestore {
         request.resource.data.isUsed == true &&
         request.resource.data.usedBy == request.auth.uid &&
         request.resource.data.usedAt is timestamp;
+    }
+
+    // 新增：聊天记录规则
+    match /conversations/{conversationId} {
+      // 允许用户创建属于自己的对话 (userId 必须匹配)
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // 允许用户读取、更新、删除属于自己的对话
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }
