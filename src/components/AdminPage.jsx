@@ -53,9 +53,18 @@ export default function AdminPage() {
 
     const loadUsers = async () => {
         try {
-            const q = query(collection(db, 'users'), orderBy('joinedAt', 'desc'))
+            // Remove orderBy to ensure we get all users (some might miss joinedAt)
+            const q = query(collection(db, 'users'))
             const snapshot = await getDocs(q)
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+            // Client-side sort: joinedAt -> lastLogin -> 0
+            list.sort((a, b) => {
+                const timeA = a.joinedAt?.toDate?.() || a.lastLogin?.toDate?.() || new Date(0)
+                const timeB = b.joinedAt?.toDate?.() || b.lastLogin?.toDate?.() || new Date(0)
+                return timeB - timeA
+            })
+
             setUsers(list)
         } catch (error) {
             console.error('Load users error:', error)
