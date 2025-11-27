@@ -94,15 +94,21 @@ export default function VocabularyPage() {
     const [currentCardIndex, setCurrentCardIndex] = useState(0)
     const [isFlipped, setIsFlipped] = useState(false)
     const [reviewQueue, setReviewQueue] = useState([])
-    const [reviewMode, setReviewMode] = useState('due') // 'due' | 'all'
+    const [reviewMode, setReviewMode] = useState('due') // 'due' | 'all' | 'custom'
+    const [showReviewSettings, setShowReviewSettings] = useState(false)
+    const [reviewSettings, setReviewSettings] = useState({
+        scope: 'all', // all, starred
+        level: 'all', // all, new (0-2), mastered (3-5)
+        count: 20     // 10, 20, 50, all
+    })
 
     useEffect(() => {
-        if (activeTab === 'flashcard') {
+        if (activeTab === 'flashcard' && reviewMode !== 'custom') {
             let queue = []
             if (reviewMode === 'all') {
                 // Review All: Shuffle all words
                 queue = [...words].sort(() => Math.random() - 0.5)
-            } else {
+            } else if (reviewMode === 'due') {
                 // Review Due: Filter by date
                 const now = new Date()
                 const dueWords = words.filter(w => {
@@ -125,6 +131,41 @@ export default function VocabularyPage() {
             setIsFlipped(false)
         }
     }, [activeTab, reviewMode])
+
+    const startCustomReview = () => {
+        let filtered = [...words]
+
+        // 1. Scope
+        if (reviewSettings.scope === 'starred') {
+            filtered = filtered.filter(w => w.isStarred)
+        }
+
+        // 2. Level
+        if (reviewSettings.level === 'new') {
+            filtered = filtered.filter(w => (w.masteryLevel || 0) <= 2)
+        } else if (reviewSettings.level === 'mastered') {
+            filtered = filtered.filter(w => (w.masteryLevel || 0) >= 3)
+        }
+
+        // 3. Shuffle
+        filtered.sort(() => Math.random() - 0.5)
+
+        // 4. Count
+        if (reviewSettings.count !== 'all') {
+            filtered = filtered.slice(0, parseInt(reviewSettings.count))
+        }
+
+        if (filtered.length === 0) {
+            showNotice('没有符合条件的单词', 'error')
+            return
+        }
+
+        setReviewQueue(filtered)
+        setCurrentCardIndex(0)
+        setIsFlipped(false)
+        setReviewMode('custom')
+        setShowReviewSettings(false)
+    }
 
     const handleMasteryUpdate = async (isRemembered) => {
         if (!currentUser || reviewQueue.length === 0) return
@@ -537,6 +578,17 @@ export default function VocabularyPage() {
                                             cursor: 'pointer'
                                         }}
                                     >随机复习</button>
+                                    <button
+                                        onClick={() => setShowReviewSettings(true)}
+                                        style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            border: '1px solid #334155',
+                                            background: reviewMode === 'custom' ? '#8b5cf6' : 'rgba(30, 41, 59, 0.5)',
+                                            color: '#fff',
+                                            cursor: 'pointer'
+                                        }}
+                                    >⚙️ 自定义</button>
                                 </div>
 
                                 {reviewQueue.length === 0 ? (
@@ -756,6 +808,131 @@ export default function VocabularyPage() {
                         <p style={{ marginTop: '20px', color: '#64748b', fontSize: '14px' }}>
                             * 每次复习选择“记住了”会提升等级，选择“忘记了”会重置为 Lv.1
                         </p>
+                    </div>
+                </div>
+            )}
+
+            {showReviewSettings && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', zIndex: 200,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(5px)'
+                }} onClick={() => setShowReviewSettings(false)}>
+                    <div style={{
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '16px',
+                        padding: '30px',
+                        maxWidth: '400px',
+                        width: '90%',
+                        color: '#fff',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                        position: 'relative'
+                    }} onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setShowReviewSettings(false)}
+                            style={{
+                                position: 'absolute', top: '15px', right: '15px',
+                                background: 'none', border: 'none',
+                                color: '#94a3b8', fontSize: '20px', cursor: 'pointer'
+                            }}
+                        >×</button>
+                        <h2 style={{ marginTop: 0, color: '#8b5cf6' }}>自定义复习</h2>
+
+                        <div style={{ marginTop: '20px' }}>
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ color: '#94a3b8', marginBottom: '8px', fontSize: '14px' }}>范围</div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    {['all', 'starred'].map(scope => (
+                                        <button
+                                            key={scope}
+                                            onClick={() => setReviewSettings(prev => ({ ...prev, scope }))}
+                                            style={{
+                                                padding: '6px 16px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #334155',
+                                                background: reviewSettings.scope === scope ? '#3b82f6' : 'rgba(30, 41, 59, 0.5)',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                                flex: 1
+                                            }}
+                                        >
+                                            {scope === 'all' ? '全部单词' : '⭐ 仅收藏'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ color: '#94a3b8', marginBottom: '8px', fontSize: '14px' }}>等级</div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    {[
+                                        { id: 'all', label: '全部' },
+                                        { id: 'new', label: '陌生 (Lv.0-2)' },
+                                        { id: 'mastered', label: '熟练 (Lv.3-5)' }
+                                    ].map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setReviewSettings(prev => ({ ...prev, level: item.id }))}
+                                            style={{
+                                                padding: '6px 12px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #334155',
+                                                background: reviewSettings.level === item.id ? '#3b82f6' : 'rgba(30, 41, 59, 0.5)',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                                flex: 1,
+                                                fontSize: '13px'
+                                            }}
+                                        >
+                                            {item.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '25px' }}>
+                                <div style={{ color: '#94a3b8', marginBottom: '8px', fontSize: '14px' }}>数量</div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    {[10, 20, 50, 'all'].map(count => (
+                                        <button
+                                            key={count}
+                                            onClick={() => setReviewSettings(prev => ({ ...prev, count }))}
+                                            style={{
+                                                padding: '6px 16px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #334155',
+                                                background: reviewSettings.count === count ? '#3b82f6' : 'rgba(30, 41, 59, 0.5)',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                                flex: 1
+                                            }}
+                                        >
+                                            {count === 'all' ? '全部' : count}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={startCustomReview}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    background: '#8b5cf6',
+                                    color: '#fff',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
+                                }}
+                            >
+                                开始复习
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
