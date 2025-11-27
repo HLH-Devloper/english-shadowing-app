@@ -62,6 +62,17 @@ export default function VocabularyPage() {
         }
     }
 
+    const handleToggleStar = async (wordId, currentStatus) => {
+        if (!currentUser) return
+        try {
+            const newStatus = !currentStatus
+            await VocabularyService.toggleStar(currentUser.uid, wordId, newStatus)
+            setWords(prev => prev.map(w => w.id === wordId ? { ...w, isStarred: newStatus } : w))
+        } catch (error) {
+            showNotice('操作失败', 'error')
+        }
+    }
+
     const handleClearAll = () => {
         if (!currentUser) return
         setShowClearModal(true)
@@ -153,6 +164,7 @@ export default function VocabularyPage() {
 
     const allFilteredWords = words.filter(w => {
         if (filterType === 'all') return true
+        if (filterType === 'starred') return w.isStarred === true
         const type = w.type || 'word'
         return type === filterType
     })
@@ -247,6 +259,18 @@ export default function VocabularyPage() {
                                                 transition: 'all 0.2s'
                                             }}
                                         >句子</button>
+                                        <button
+                                            onClick={() => setFilterType('starred')}
+                                            style={{
+                                                padding: '6px 16px',
+                                                borderRadius: '20px',
+                                                border: '1px solid #334155',
+                                                background: filterType === 'starred' ? '#f59e0b' : 'rgba(30, 41, 59, 0.5)',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >⭐ 标星</button>
                                     </div>
 
                                     {/* View Mode Toggle */}
@@ -316,6 +340,20 @@ export default function VocabularyPage() {
                                                             <p style={{ color: '#cbd5e1', margin: '4px 0' }}>{word.definition}</p>
                                                         </div>
                                                         <button
+                                                            onClick={() => handleToggleStar(word.id, word.isStarred)}
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                fontSize: '20px',
+                                                                color: word.isStarred ? '#f59e0b' : '#475569',
+                                                                marginRight: '10px'
+                                                            }}
+                                                            title={word.isStarred ? "取消标星" : "标星"}
+                                                        >
+                                                            {word.isStarred ? '★' : '☆'}
+                                                        </button>
+                                                        <button
                                                             onClick={() => handleDelete(word.id)}
                                                             style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, fontSize: '18px' }}
                                                             title="移除"
@@ -364,6 +402,19 @@ export default function VocabularyPage() {
                                                             onClick={(e) => speakWord(word.word, e)}
                                                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#06b6d4', fontSize: '14px' }}
                                                         >🔊</button>
+                                                        <button
+                                                            onClick={() => handleToggleStar(word.id, word.isStarred)}
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                fontSize: '18px',
+                                                                color: word.isStarred ? '#f59e0b' : '#475569'
+                                                            }}
+                                                            title={word.isStarred ? "取消标星" : "标星"}
+                                                        >
+                                                            {word.isStarred ? '★' : '☆'}
+                                                        </button>
                                                         <button
                                                             onClick={() => handleDelete(word.id)}
                                                             style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, fontSize: '14px' }}

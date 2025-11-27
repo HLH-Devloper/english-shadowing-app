@@ -122,6 +122,24 @@ export const VocabularyService = {
     },
 
     /**
+     * 更新单词标星状态
+     */
+    async toggleStar(userId, wordId, isStarred) {
+        if (!userId || !wordId) return
+        try {
+            const wordRef = doc(db, 'users', userId, COLLECTION_NAME, wordId)
+            await updateDoc(wordRef, {
+                isStarred: isStarred,
+                updatedAt: serverTimestamp()
+            })
+            return true
+        } catch (error) {
+            console.error('Error toggling star:', error)
+            throw error
+        }
+    },
+
+    /**
      * 删除生词
      */
     async deleteWord(userId, wordId) {
