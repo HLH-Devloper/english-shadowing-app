@@ -247,8 +247,9 @@ export default function VocabularyPage() {
                     <>
                         {activeTab === 'list' && (
                             <div className="vocab-list">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+                                    {/* Left: Filters */}
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                                         <button
                                             onClick={() => setFilterType('all')}
                                             style={{
@@ -297,62 +298,66 @@ export default function VocabularyPage() {
                                                 transition: 'all 0.2s'
                                             }}
                                         >⭐ 收藏</button>
+
+                                        {/* Level Filter (Styled) */}
+                                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                            <select
+                                                value={filterLevel}
+                                                onChange={(e) => setFilterLevel(e.target.value)}
+                                                style={{
+                                                    appearance: 'none',
+                                                    padding: '6px 32px 6px 16px',
+                                                    borderRadius: '20px',
+                                                    border: '1px solid #334155',
+                                                    background: filterLevel !== 'all' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(30, 41, 59, 0.5)',
+                                                    color: '#fff',
+                                                    cursor: 'pointer',
+                                                    outline: 'none',
+                                                    fontSize: '13.33px',
+                                                    fontFamily: 'inherit'
+                                                }}
+                                            >
+                                                <option value="all" style={{ background: '#1e293b' }}>全部等级</option>
+                                                <option value="0" style={{ background: '#1e293b' }}>Lv.0 陌生</option>
+                                                <option value="1" style={{ background: '#1e293b' }}>Lv.1 认识</option>
+                                                <option value="2" style={{ background: '#1e293b' }}>Lv.2 熟悉</option>
+                                                <option value="3" style={{ background: '#1e293b' }}>Lv.3 掌握</option>
+                                                <option value="4" style={{ background: '#1e293b' }}>Lv.4 牢记</option>
+                                                <option value="5" style={{ background: '#1e293b' }}>Lv.5 永久</option>
+                                            </select>
+                                            <span style={{ position: 'absolute', right: '12px', pointerEvents: 'none', fontSize: '10px', color: '#94a3b8' }}>▼</span>
+                                        </div>
                                     </div>
 
-                                    {/* Level Filter */}
-                                    <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginLeft: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
-                                        <span style={{ color: '#94a3b8', fontSize: '12px', whiteSpace: 'nowrap' }}>等级:</span>
-                                        <select
-                                            value={filterLevel}
-                                            onChange={(e) => setFilterLevel(e.target.value)}
+                                    {/* Right: View Mode Toggle */}
+                                    <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '8px', padding: '2px', border: '1px solid #334155' }}>
+                                        <button
+                                            onClick={() => setViewMode('card')}
+                                            title="卡片视图"
                                             style={{
-                                                background: 'rgba(30, 41, 59, 0.5)',
-                                                border: '1px solid #334155',
-                                                color: '#fff',
-                                                borderRadius: '4px',
+                                                background: viewMode === 'card' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                border: 'none',
+                                                borderRadius: '6px',
                                                 padding: '4px 8px',
-                                                fontSize: '12px'
+                                                cursor: 'pointer',
+                                                fontSize: '16px',
+                                                color: viewMode === 'card' ? '#fff' : '#64748b'
                                             }}
-                                        >
-                                            <option value="all">全部等级</option>
-                                            <option value="0">Lv.0 陌生</option>
-                                            <option value="1">Lv.1 认识</option>
-                                            <option value="2">Lv.2 熟悉</option>
-                                            <option value="3">Lv.3 掌握</option>
-                                            <option value="4">Lv.4 牢记</option>
-                                            <option value="5">Lv.5 永久</option>
-                                        </select>
+                                        >🗂️</button>
+                                        <button
+                                            onClick={() => setViewMode('compact')}
+                                            title="紧凑视图"
+                                            style={{
+                                                background: viewMode === 'compact' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                padding: '4px 8px',
+                                                cursor: 'pointer',
+                                                fontSize: '16px',
+                                                color: viewMode === 'compact' ? '#fff' : '#64748b'
+                                            }}
+                                        >☰</button>
                                     </div>
-                                </div>
-
-                                {/* View Mode Toggle */}
-                                <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '8px', padding: '2px', border: '1px solid #334155', marginBottom: '20px' }}>
-                                    <button
-                                        onClick={() => setViewMode('card')}
-                                        title="卡片视图"
-                                        style={{
-                                            background: viewMode === 'card' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            padding: '4px 8px',
-                                            cursor: 'pointer',
-                                            fontSize: '16px',
-                                            color: viewMode === 'card' ? '#fff' : '#64748b'
-                                        }}
-                                    >🗂️</button>
-                                    <button
-                                        onClick={() => setViewMode('compact')}
-                                        title="紧凑视图"
-                                        style={{
-                                            background: viewMode === 'compact' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            padding: '4px 8px',
-                                            cursor: 'pointer',
-                                            fontSize: '16px',
-                                            color: viewMode === 'compact' ? '#fff' : '#64748b'
-                                        }}
-                                    >☰</button>
                                 </div>
 
                                 {displayedWords.length === 0 ? (
