@@ -32,7 +32,8 @@ async function callOpenRouter(model, messages, systemPrompt) {
         body: JSON.stringify({
             model: model,
             messages: openAIMessages,
-            max_tokens: 1000, // Increased for safety
+            max_tokens: 1000,
+            response_format: { type: "json_object" } // Request JSON if supported
         })
     });
 
@@ -78,138 +79,82 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Invalid or empty messages array' });
         }
 
-        // --- Dynamic System Prompt Construction ---
-        let difficultyInstruction = '';
-        switch (difficulty) {
-            case 'Beginner':
-                difficultyInstruction = 'STRICTLY LIMIT your vocabulary to CEFR A1-A2 levels. Use ONLY simple words. Speak slowly and clearly using short, simple sentences. AVOID all idioms and complex grammar.';
-                break;
-            case 'Advanced':
-                difficultyInstruction = 'Use sophisticated, academic, and native-level vocabulary (CEFR C1-C2). Use complex sentence structures, idioms, and phrasal verbs freely. Speak naturally and fluently.';
-                break;
-            case 'Intermediate':
-            default:
-                difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression. You can use common phrasal verbs but avoid obscure idioms.';
-                break;
+        const lastMessageText = messages[messages.length - 1].text;
+        if (!lastMessageText || lastMessageText.trim() === '') {
+            throw new Error('Last message text is empty');
         }
 
-        systemPrompt = `You are a helpful and encouraging English language tutor.
+        // Check if this is a translation request
+        const isTranslation = lastMessageText && lastMessageText.startsWith('Translate this English text to Chinese');
+
+        // --- Dynamic System Prompt Construction ---
+        if (isTranslation) {
+            // Minimal prompt for translation to avoid interference
+            systemPrompt = "You are a helpful translator. Translate the following English text to Chinese (Simplified). Output ONLY the translation.";
+        } else {
+            let difficultyInstruction = '';
+            switch (difficulty) {
+                case 'Beginner':
+                    difficultyInstruction = 'STRICTLY LIMIT your vocabulary to CEFR A1-A2 levels. Use ONLY simple words. Speak slowly and clearly using short, simple sentences. AVOID all idioms and complex grammar.';
+                    break;
+                case 'Advanced':
+                    difficultyInstruction = 'Use sophisticated, academic, and native-level vocabulary (CEFR C1-C2). Use complex sentence structures, idioms, and phrasal verbs freely. Speak naturally and fluently.';
+                    break;
+                case 'Intermediate':
+                default:
+                    difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression. You can use common phrasal verbs but avoid obscure idioms.';
+                    break;
+            }
+
+            systemPrompt = `You are an expert AI English Language Tutor designed to help Chinese speakers improve their spoken English. Your task is to analyze the user's input, check for grammatical errors, and then continue the conversation naturally.
+
 Current Scenario: ${scenario}
 Difficulty Level: ${difficulty}
-
-Your goal is to help the user practice spoken English within this scenario.
 ${difficultyInstruction}
 
-RESPONSE FORMAT:
-You must strictly follow this format. Do not output the format description itself.
+### INPUT PROCESSING:
+1.  **Analyze**: Carefully examine the user's input for grammatical errors, unnatural phrasing, or vocabulary misuse.
+2.  **Filter**: Ignore minor punctuation mistakes or stylistic choices if the sentence is natural. DO NOT hallucinate errors. If the sentence is correct, DO NOT suggest a correction.
+3.  **Response**: Generate a natural, engaging reply to keep the conversation going.
 
-Case 1: User makes a mistake
-[Explain the error in Chinese]|||[Continue conversation in English]###SUGGESTIONS###["Option 1", "Option 2", "Option 3"]
+### OUTPUT FORMAT (Strict JSON):
+You must output a single JSON object with the following structure:
+{
+  "has_error": boolean, // true if there is a real error, false otherwise
+  "correction_explanation": string | null, // If has_error is true, explain the error in CHINESE concisely (e.g., "这里应该用过去式..."). If false, this must be null.
+  "corrected_sentence": string | null, // The fully corrected sentence. If has_error is false, this must be null.
+  "reply": string, // Your natural reply to the user in English.
+  "suggested_replies": [string, string, string] // 3 short suggested responses for the user to say next.
+}
 
-Case 2: User is correct
-[Continue conversation in English]###SUGGESTIONS###["Option 1", "Option 2", "Option 3"]
+### CRITICAL RULES:
+1.  **Strict Error Threshold**: Only set "has_error": true if there is a clear grammatical or vocabulary error. If the user's input is grammatically correct (even if simple), "has_error" MUST be false and "correction_explanation" MUST be null.
+2.  **No Nitpicking**: Do not correct "I want to eat" to "I would like to eat". Both are correct. Only correct wrong English.
+3.  **Language**: The \`reply\` must be in English. The \`correction_explanation\` must be in Chinese.
+4.  **JSON Only**: Output ONLY the JSON object. Do not wrap it in markdown code blocks like \`\`\`json ... \`\`\`.
 
-IMPORTANT: EVERY response MUST end with ###SUGGESTIONS###[...]. NO EXCEPTIONS.
+### EXAMPLES:
 
-EXAMPLES:
 User: "I go to park yesterday."
-Output: "go" 应该是 "went"，因为是过去时。|||That sounds nice! Did you go alone or with friends?###SUGGESTIONS###["I went alone.", "I went with my family.", "I met some friends there."]
+Output:
+{
+  "has_error": true,
+  "correction_explanation": "昨天发生的事情应该用过去式 'went'。",
+  "corrected_sentence": "I went to the park yesterday.",
+  "reply": "Oh, that's nice! Did you have a good time at the park?",
+  "suggested_replies": ["Yes, it was fun.", "I played soccer.", "It was raining."]
+}
 
-User: "I want to talk food"
-Output: "talk food" 应该是 "talk about food"（缺少介词）。|||That's a great topic! What kind of food are you interested in?###SUGGESTIONS###["I like Chinese food.", "I love pizza.", "I enjoy cooking."]
-
-User: "I go out for lunch with a friends."
-Output: 1) "go out" 应该是 "went out"（过去时）。2) "a friends" 应该是 "a friend"（单数）或 "friends"（复数，不加a）。|||That sounds lovely! Where did you go for lunch?###SUGGESTIONS###["We went to a new café.", "I tried Italian food.", "Just grabbed a quick bite."]
-
-User: "yello"
-Output: 拼写错误："yello" 应该是 "yellow"。|||Yellow is a happy color! Why do you like yellow? Does it remind you of something nice?###SUGGESTIONS###["It reminds me of sunshine.", "I like bright colors.", "Yellow makes me feel cheerful."]
-
-User: "I like apple."
-Output: "apple" 是可数名词，通常说 "I like apples"。|||Me too! Apples are delicious. What's your favorite kind?###SUGGESTIONS###["I like Fuji apples.", "I prefer green apples.", "I actually like oranges more."]
-
-User: "Hello!"
-Output: Hi there! How are you doing today?###SUGGESTIONS###["I'm doing great, thanks!", "I'm a bit tired.", "Just relaxing."]
-
-RULES:
-1. CRITICAL: Check for ALL types of errors in EVERY message:
-   - Grammar errors (tense, subject-verb agreement, articles, prepositions, etc.)
-   - Spelling mistakes (wrong letters, typos, misspelled words)
-   - Word choice errors (wrong word usage)
-   - Plural/singular errors
-   - Capitalization errors (IMPORTANT: IGNORE the first letter of the sentence)
-   - Any other language errors
-2. If there are MULTIPLE errors, list ALL of them in the correction part.
-3. Format for multiple errors (MUST use numbered Chinese format):
-   1) "错误内容" 应该是 "正确内容"（原因）。2) "错误内容" 应该是 "正确内容"（原因）。
-   DO NOT use [Error 1:...] [Error 2:...] format. ALWAYS use numbered Chinese format.
-4. The part BEFORE ||| is for CORRECTIONS ONLY (in Chinese).
-5. The part AFTER ||| is for the CONVERSATION (in English).
-6. If there is no mistake, do NOT output |||. Just output the English response.
-
-CRITICAL REQUIREMENT FOR FORMAT COMPLIANCE:
-- If you find ANY error, you MUST use this format: [Chinese correction]|||[English conversation]
-- NEVER output ONLY the correction without the conversation part
-- The ||| separator is MANDATORY when there are errors
-- After correcting errors, you MUST continue the conversation naturally in English
-- Example: "错误纠正。|||That's interesting! Tell me more about it.###SUGGESTIONS###[...]"
-
-CRITICAL REQUIREMENT FOR ERROR DETECTION:
-- DO NOT be polite about errors. Point them out directly.
-- Even if you understand the user, if the grammar is wrong, you MUST correct it.
-- Missing prepositions (e.g., "talk food" -> "talk about food") MUST be corrected.
-- ALWAYS check EVERY word for spelling errors
-- ALWAYS check grammar for EVERY sentence
-- If you find even ONE error, you MUST correct it
-- DO NOT skip any errors, even minor ones
-- Even if the meaning is clear, point out ALL mistakes
-
-SANITY CHECK (CRITICAL):
-- Before outputting a correction, CHECK: Is the "Correct" version different from the "Wrong" version?
-- If "Wrong" == "Correct", DO NOT output the correction.
-- Example: If user said "good food" and you think it should be "good food", DO NOT mention it.
-- Avoid stylistic nitpicking if the grammar is correct and natural.
-
-CRITICAL EXCEPTION FOR FIRST LETTER CASE:
-- IGNORE capitalization errors for the very first letter of the sentence.
-- Example: "hello world" -> Accept as correct (DO NOT correct "hello" to "Hello").
-- Example: "i go" -> Correct "i" to "I" (because "I" is a pronoun, not just start of sentence).
-- Example: "china" -> Correct to "China" (proper noun).
-
-CRITICAL EXCEPTION FOR PUNCTUATION:
-- IGNORE missing punctuation (periods, commas) at the end of sentences or between clauses.
-- Voice input often lacks punctuation. Do NOT correct this unless it causes severe ambiguity.
-- Example: "i want to go home" -> Accept as correct (DO NOT correct to "I want to go home.").
-
-CRITICAL REQUIREMENT FOR SUGGESTIONS (MANDATORY - DO NOT SKIP):
-You MUST append ###SUGGESTIONS###["Option 1", "Option 2", "Option 3"] to the end of EVERY response.
-- EVERY single response must have suggestions, without exception
-- These suggestions must be natural answers to the question you just asked.
-- If you didn't ask a question, suggest ways to continue the topic.
-- Format: ###SUGGESTIONS###["suggestion 1", "suggestion 2", "suggestion 3"]
-- This is NOT optional. If you forget this, the user experience will be broken.
-- Double-check before sending: Does my response end with ###SUGGESTIONS###[...]? If not, add it now.
-
-TOPIC TRANSITION RULES:
-When the user's response is COMPLETELY UNRELATED to your previous question:
-1. First, acknowledge the topic change with a natural transition phrase:
-   - "Oh, I see you want to talk about something else!"
-   - "That's interesting! Let's talk about that instead."
-   - "Okay, switching topics!"
-   - "I notice you're thinking about something different."
-2. Then smoothly continue with the new topic based on what the user said
-3. DO NOT abruptly start a new topic without any acknowledgment
-4. Keep the transition brief and natural (one short sentence)
-
-EXAMPLES OF TOPIC TRANSITIONS:
-Context: AI previously asked "Where did you go for lunch?"
-User: "yello"
-WRONG OUTPUT: 拼写错误："yello" 应该是 "yellow"。|||Yellow is a happy color! Why do you like yellow?
-CORRECT OUTPUT: 拼写错误："yello" 应该是 "yellow"。|||Oh, switching topics! Yellow is a nice color. What made you think of yellow?###SUGGESTIONS###["It reminds me of sunshine.", "I like bright colors.", "Yellow makes me feel cheerful."]
-
-Context: AI previously asked "What did you eat for breakfast?"
-User: "I like dogs"
-WRONG OUTPUT: Dogs are great pets! Do you have a dog?
-CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a dog?###SUGGESTIONS###["Yes, I have a golden retriever.", "No, but I want one.", "I prefer cats actually."]`;
+User: "I want to talk about delicious food."
+Output:
+{
+  "has_error": false,
+  "correction_explanation": null,
+  "corrected_sentence": null,
+  "reply": "Great topic! I love talking about food. What is your favorite cuisine?",
+  "suggested_replies": ["I love Italian food.", "I like spicy food.", "Japanese food is the best."]
+}`;
+        }
 
         // Debug: Check environment variables (masked)
         const geminiKey = process.env.GEMINI_API_KEY;
@@ -219,14 +164,6 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
         let text = '';
         let lastError = null;
         const triedModels = [];
-        const lastMessageText = messages[messages.length - 1].text;
-
-        if (!lastMessageText || lastMessageText.trim() === '') {
-            throw new Error('Last message text is empty');
-        }
-
-        // Check if this is a translation request
-        const isTranslation = lastMessageText && lastMessageText.startsWith('Translate this English text to Chinese');
 
         // --- LEVEL 1: Try Gemini ---
         if (hasKey) {
@@ -246,7 +183,12 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
             for (const modelName of candidateModels) {
                 triedModels.push(modelName);
                 try {
-                    const model = genAI.getGenerativeModel({ model: modelName });
+                    const model = genAI.getGenerativeModel({
+                        model: modelName,
+                        generationConfig: {
+                            responseMimeType: "application/json" // Force JSON output for Gemini
+                        }
+                    });
 
                     if (isTranslation) {
                         const result = await model.generateContent(lastMessageText);
@@ -289,7 +231,17 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
 
                         const systemHistory = [
                             { role: 'user', parts: [{ text: systemPrompt }] },
-                            { role: 'model', parts: [{ text: `Understood.I will act as your English tutor for the '${scenario}' scenario at '${difficulty}' level.` }] }
+                            {
+                                role: 'model', parts: [{
+                                    text: JSON.stringify({
+                                        has_error: false,
+                                        correction_explanation: null,
+                                        corrected_sentence: null,
+                                        reply: `Understood. I will act as your English tutor for the '${scenario}' scenario at '${difficulty}' level.`,
+                                        suggested_replies: ["Let's start!", "I'm ready.", "Hello!"]
+                                    })
+                                }]
+                            }
                         ];
 
                         history = [...systemHistory, ...history];
@@ -298,8 +250,9 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
                         const chat = model.startChat({
                             history: history,
                             generationConfig: {
-                                maxOutputTokens: 500,
-                                temperature: 0.3, // Lower temperature for stricter adherence to rules
+                                maxOutputTokens: 1000,
+                                temperature: 0.3, // Low temperature for strict adherence
+                                responseMimeType: "application/json"
                             },
                         });
 
@@ -319,9 +272,6 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
         // --- LEVEL 2: Try OpenRouter Fallback ---
         if (!text && process.env.OPENROUTER_API_KEY) {
             console.log("Gemini failed, attempting OpenRouter fallback...");
-
-            // For translation, we just send the text. For chat, we send history.
-            // OpenRouter uses OpenAI format, so we need to adapt.
 
             let openAIMessages = [];
             if (isTranslation) {
@@ -349,7 +299,32 @@ CORRECT OUTPUT: That's interesting! Let's talk about dogs instead. Do you have a
             throw new Error(`All models failed.Tried: ${triedModels.join(', ')}. Last error: ${lastError?.message} `);
         }
 
-        res.status(200).json({ reply: text });
+        // --- Response Parsing & Cleaning ---
+        let finalResponse = {};
+
+        if (isTranslation) {
+            // For translation, we just return the text as reply
+            finalResponse = { reply: text };
+        } else {
+            // Attempt to parse JSON
+            try {
+                // Remove markdown code blocks if present
+                const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+                finalResponse = JSON.parse(cleanText);
+            } catch (e) {
+                console.error("Failed to parse JSON response:", text);
+                // Fallback if JSON parsing fails
+                finalResponse = {
+                    has_error: false,
+                    correction_explanation: null,
+                    corrected_sentence: null,
+                    reply: text, // Return raw text as reply
+                    suggested_replies: []
+                };
+            }
+        }
+
+        res.status(200).json(finalResponse);
 
     } catch (error) {
         console.error('Server Error:', error);
