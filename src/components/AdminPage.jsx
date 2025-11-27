@@ -14,6 +14,7 @@ export default function AdminPage() {
     const [users, setUsers] = useState([])
     const [inviteCodes, setInviteCodes] = useState([])
     const [newCode, setNewCode] = useState('')
+    const [expiryDate, setExpiryDate] = useState('')
     const [toastMsg, setToastMsg] = useState('')
     const [toastType, setToastType] = useState('info')
 
@@ -56,7 +57,8 @@ export default function AdminPage() {
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
             setUsers(list)
         } catch (error) {
-            showNotice('加载用户列表失败', 'error')
+            console.error('Load users error:', error)
+            showNotice('加载用户列表失败: ' + error.message, 'error')
         }
     }
 
@@ -67,6 +69,7 @@ export default function AdminPage() {
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
             setInviteCodes(list)
         } catch (error) {
+            console.error('Load invite codes error:', error)
             showNotice('加载邀请码失败', 'error')
         }
     }
@@ -76,13 +79,19 @@ export default function AdminPage() {
         if (!code) return
 
         try {
-            await setDoc(doc(db, 'inviteCodes', code), {
+            const data = {
                 createdAt: serverTimestamp(),
                 isUsed: false,
                 usedBy: null,
                 usedAt: null
-            })
+            }
+            if (expiryDate) {
+                data.expiryDate = new Date(expiryDate)
+            }
+
+            await setDoc(doc(db, 'inviteCodes', code), data)
             setNewCode('')
+            setExpiryDate('')
             showNotice('邀请码创建成功', 'success')
             loadInviteCodes()
         } catch (error) {
@@ -178,7 +187,7 @@ export default function AdminPage() {
                         </table>
                     ) : (
                         <div>
-                            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+                            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <input
                                     type="text"
                                     value={newCode}
@@ -188,6 +197,16 @@ export default function AdminPage() {
                                         background: '#1e293b', border: '1px solid #475569', borderRadius: '8px',
                                         padding: '8px 12px', color: '#fff', outline: 'none'
                                     }}
+                                />
+                                <input
+                                    type="date"
+                                    value={expiryDate}
+                                    onChange={e => setExpiryDate(e.target.value)}
+                                    style={{
+                                        background: '#1e293b', border: '1px solid #475569', borderRadius: '8px',
+                                        padding: '8px 12px', color: '#fff', outline: 'none'
+                                    }}
+                                    title="过期时间（可选）"
                                 />
                                 <button
                                     onClick={handleGenerateCode}
@@ -203,6 +222,7 @@ export default function AdminPage() {
                                     <tr style={{ borderBottom: '1px solid #334155', textAlign: 'left' }}>
                                         <th style={{ padding: '12px' }}>邀请码</th>
                                         <th style={{ padding: '12px' }}>状态</th>
+                                        <th style={{ padding: '12px' }}>过期时间</th>
                                         <th style={{ padding: '12px' }}>使用者</th>
                                         <th style={{ padding: '12px' }}>创建时间</th>
                                         <th style={{ padding: '12px' }}>操作</th>
@@ -215,12 +235,13 @@ export default function AdminPage() {
                                             <td style={{ padding: '12px' }}>
                                                 <span style={{
                                                     padding: '2px 8px', borderRadius: '4px',
-                                                    background: code.isUsed ? '#ef4444' : '#10b981',
+                                                    background: code.isUsed ? '#ef4444' : (code.expiryDate && code.expiryDate.toDate() < new Date() ? '#64748b' : '#10b981'),
                                                     color: '#fff', fontSize: '12px'
                                                 }}>
-                                                    {code.isUsed ? '已使用' : '未使用'}
+                                                    {code.isUsed ? '已使用' : (code.expiryDate && code.expiryDate.toDate() < new Date() ? '已过期' : '未使用')}
                                                 </span>
                                             </td>
+                                            <td style={{ padding: '12px' }}>{code.expiryDate?.toDate ? code.expiryDate.toDate().toLocaleDateString() : '-'}</td>
                                             <td style={{ padding: '12px', fontSize: '12px', color: '#94a3b8' }}>{code.usedBy || '-'}</td>
                                             <td style={{ padding: '12px' }}>{code.createdAt?.toDate ? code.createdAt.toDate().toLocaleDateString() : '-'}</td>
                                             <td style={{ padding: '12px' }}>

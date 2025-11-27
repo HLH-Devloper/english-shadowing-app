@@ -9,13 +9,14 @@ service cloud.firestore {
       return isSignedIn() && (
         request.auth.uid in [
           "6ljgPEx6wnbQ1p8STHtS8h6ug4n2"
-        ]
+        ] ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
 
     // 用户文档：仅本人可读写
     match /users/{uid} {
-      allow read: if isOwner(uid);
+      allow read: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid);
 
       // 允许本人更新观看计数与登录时间；
