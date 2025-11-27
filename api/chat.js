@@ -95,14 +95,14 @@ export default async function handler(req, res) {
             let difficultyInstruction = '';
             switch (difficulty) {
                 case 'Beginner':
-                    difficultyInstruction = 'STRICTLY LIMIT your vocabulary to CEFR A1-A2 levels. Use ONLY simple words. Speak slowly and clearly using short, simple sentences. AVOID all idioms and complex grammar.';
+                    difficultyInstruction = 'STRICTLY LIMIT your vocabulary to CEFR A1-A2 levels. Use ONLY simple words. Speak slowly and clearly using short, simple sentences. AVOID all idioms and complex grammar. Ensure your `suggested_replies` are also very simple (1-5 words).';
                     break;
                 case 'Advanced':
-                    difficultyInstruction = 'Use sophisticated, academic, and native-level vocabulary (CEFR C1-C2). Use complex sentence structures, idioms, and phrasal verbs freely. Speak naturally and fluently.';
+                    difficultyInstruction = 'Use sophisticated, academic, and native-level vocabulary (CEFR C1-C2). Use complex sentence structures, idioms, and phrasal verbs freely. Speak naturally and fluently. Ensure your `suggested_replies` are complex and natural for a native speaker.';
                     break;
                 case 'Intermediate':
                 default:
-                    difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression. You can use common phrasal verbs but avoid obscure idioms.';
+                    difficultyInstruction = 'Use natural daily conversation vocabulary (CEFR B1-B2). Balance simplicity with natural expression. You can use common phrasal verbs but avoid obscure idioms. Ensure your `suggested_replies` are standard daily expressions.';
                     break;
             }
 
@@ -153,7 +153,33 @@ Output:
   "corrected_sentence": null,
   "reply": "Great topic! I love talking about food. What is your favorite cuisine?",
   "suggested_replies": ["I love Italian food.", "I like spicy food.", "Japanese food is the best."]
-}`;
+}
+
+### CRITICAL EXCEPTION FOR CAPITALIZATION (STRICT):
+- **NEVER** correct capitalization errors.
+- **NEVER** correct "i" to "I".
+- **NEVER** correct the first letter of a sentence.
+- **NEVER** correct proper nouns if the only error is capitalization (e.g., "china" -> "China" is NOT an error for this task).
+- Treat all input as case-insensitive.
+- Example: "i dont know" -> NO ERROR.
+- Example: "china is big" -> NO ERROR.
+
+### CRITICAL EXCEPTION FOR PUNCTUATION:
+- IGNORE missing punctuation (periods, commas) at the end of sentences or between clauses.
+- Voice input often lacks punctuation. Do NOT correct this unless it causes severe ambiguity.
+- Example: "i want to go home" -> Accept as correct (DO NOT correct to "I want to go home.").
+
+### CRITICAL REQUIREMENT FOR SUGGESTIONS (MANDATORY):
+- You MUST provide 3 suggested replies.
+- These suggestions MUST match the current **Difficulty Level** (${difficulty}).
+- Beginner: Simple words, short sentences.
+- Intermediate: Natural daily expressions.
+- Advanced: Sophisticated vocabulary and structure.
+
+### TOPIC TRANSITION RULES:
+When the user's response is COMPLETELY UNRELATED to your previous question:
+1. First, acknowledge the topic change with a natural transition phrase.
+2. Then smoothly continue with the new topic.`;
         }
 
         // Debug: Check environment variables (masked)
